@@ -50,7 +50,7 @@
     },
     vitesses: { exp: 1.6, std: 1, grp: 0.85, diff: 0.7 },
     options: { porte_a_porte: 200 },
-    seuils: { moto_poids_max_kg: 10, moto_volume_max_m3: 0.08, utilitaire_poids_max_kg: 500, utilitaire_volume_max_m3: 4 },
+    seuils: { moto_poids_max_kg: 10, moto_volume_max_m3: 0.08, utilitaire_poids_max_kg: 500, utilitaire_volume_max_m3: 4, approbation_double: 100000, delai_affectation_min: 10 },
     commission: { type: "pourcentage", valeur: 0.15 }
   });
   const arr = (n, pas) => Math.round(n / pas) * pas;
@@ -196,6 +196,19 @@
     o.lignes.forEach((l) => { if (!Number.isInteger(l.montant) || l.montant < 0) throw err("FACTURE_INVALIDE", "Montant de ligne invalide"); });
     const sous = o.lignes.reduce((s, l) => s + l.montant, 0), taxes = Math.round(o.taxes || 0);
     return gel({ numero: o.numero, emetteur: o.emetteur || "11Barré", client: o.client, clientNom: o.clientNom || "", periode: o.periode || "", emise_le: o.at || Date.now(), echeance: o.echeance || null, devise: o.devise || "FCFA", lignes: o.lignes.map((l) => ({ ref: l.ref, libelle: l.libelle, montant: l.montant })), sous_total: sous, taxes, total: sous + taxes, statut: "emise" });
+  };
+  /** Documents du dossier d'un livreur : l'assurance ne doit pas être expirée. */
+  M.docsValides = (l, now) => !!(l && l.dossier && l.dossier.assurance_exp && Date.parse(l.dossier.assurance_exp) > (now || Date.now()));
+  /** Livreurs éligibles à une commande : dossier validé, documents en règle, bon type de véhicule (moto ↔ livreur, cargo ↔ chauffeur). */
+  M.eligibles = (livreurs, cmd, now) => livreurs.filter((l) => l.statut === "valide" && (cmd.mode === "moto") === (l.type === "livreur") && M.docsValides(l, now));
+  /** Approbation d'une opération financière : un seul contrôle jusqu'au seuil, deux approbateurs distincts au-delà. */
+  M.approuver = (d, par, seuil) => {
+    const montant = d.montant != null ? d.montant : d.m; d.approbations = d.approbations || [];
+    if (!par || !par.id) throw err("APPROBATEUR_INCONNU", "Approbateur obligatoire");
+    if (d.approbations.some((a) => a.par === par.id)) throw err("DEJA_APPROUVE", "Cet utilisateur a déjà approuvé : un second approbateur distinct est requis");
+    d.approbations.push({ par: par.id, nom: par.nom, role: par.role, at: Date.now() });
+    const requis = montant > seuil ? 2 : 1;
+    return { requis, obtenues: d.approbations.length, pret: d.approbations.length >= requis };
   };
   /** Rapprochement : compare le prestataire et la caisse du journal. Signale l'écart, ne corrige rien. */
   M.rapprocher = (L, montantPrestataire) => {

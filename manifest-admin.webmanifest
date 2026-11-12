@@ -1,0 +1,18 @@
+{
+  "id": "./admin.html",
+  "name": "11Barré Administration",
+  "short_name": "11Barré Admin",
+  "description": "Administration de la plateforme : comptes, livreurs, commandes, finance, tarifs, audit.",
+  "lang": "fr",
+  "start_url": "./admin.html",
+  "scope": "./admin.html",
+  "display": "standalone",
+  "background_color": "#0d1b2a",
+  "theme_color": "#0d1b2a",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "icons/admin-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/admin-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/admin-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

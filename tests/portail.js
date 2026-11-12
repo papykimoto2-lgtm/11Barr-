@@ -7,14 +7,15 @@ let ok=0,ko=0;const t=(l,c,d)=>{if(c){ok++;console.log("PASS",l)}else{ko++;conso
 (async()=>{await new Promise(o=>srv.listen(0,"127.0.0.1",o));const base="http://127.0.0.1:"+srv.address().port;
 const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:1100,height:900}});const errs=[];
 const mk=async(u,vp)=>{const p=await ctx.newPage();if(vp)await p.setViewportSize(vp);p.on("pageerror",e=>errs.push(u+": "+e.message));await p.goto(base+"/"+u);return p};
-const pf=await mk("fournisseur.html"),pd=await mk("chauffeur.html",{width:390,height:800});
+const pf=await mk("fournisseur.html"),pd=await mk("chauffeur.html",{width:390,height:800}),pa=await mk("admin.html");
 const toast=async p=>(await p.$$eval("#toast",e=>e.map(n=>n.textContent).join(" | ")).catch(()=>""))||"";
 /* --- inscription et validation --- */
 t("inscription : formulaire affiché",!!(await pf.$('[data-a=creerorg]')));
 await pf.click('[data-a=creerorg]');t("inscription : champs obligatoires contrôlés",(await toast(pf)).includes("À compléter"));
 await pf.selectOption('[data-r=type]','entreprise');await pf.fill('[data-r=nom]','Boutique Test SARL');await pf.fill('[data-r=tel]','0707070707');await pf.fill('[data-r=email]','contact@test.ci');await pf.fill('[data-r=adresse]','Marcory Zone 4, rue 12');await pf.fill('[data-r=contact]','Ama Diallo');
 await pf.click('[data-a=creerorg]');t("compte non validé : accès bloqué",(await pf.textContent("main")).includes("vérification")&&!(await pf.$('[data-a=tab]')));
-await pf.click('[data-a=validerorg]');t("compte validé : tableau de bord",(await pf.textContent("main")).includes("Tableau de bord"));
+await pa.click('[data-a=tab][data-t=comptes]');await pa.click('tr.k');await pa.fill('[data-rem]','10');await pa.click('[data-a=orgstatut][data-v=valide]');
+await pf.waitForFunction(()=>document.querySelector("#app").textContent.includes("Tableau de bord"),null,{timeout:6000});{const mt=await pf.textContent("main");t("compte validé par l'administration : tableau de bord",mt.includes("Tableau de bord"),mt.slice(0,80))}
 await pf.screenshot({path:SP+"p1-tableau.png"});
 /* --- nouvelle livraison : devis, mode selon le poids, remise de contrat --- */
 await pf.click('[data-a=tab][data-t=nouvelle]');
@@ -31,11 +32,13 @@ await pf.screenshot({path:SP+"p3-detail.png"});await pf.click('.pop [data-a=ferm
 await pf.click('[data-a=tab][data-t=nouvelle]');await pf.fill('[data-f=dNom]','Doublon');await pf.fill('[data-f=dTel]','0505050505');await pf.fill('[data-f=refExt]','CMD-A1');await pf.click('[data-a=creerliv]');
 t("doublon de référence refusé",(await toast(pf)).includes("déjà utilisée")&&(await pf.evaluate(()=>LIV.lire().length))===1);
 /* --- livreur : profil moto, offre venant du portail --- */
-await pd.fill('[data-k=nom]','Koffi Test');await pd.click('[data-a=type][data-t=livreur]');await pd.click('[data-a=entrer]');await pd.click('[data-a=ligne]');
+await pd.fill('[data-k=nom]','Koffi Test');await pd.click('[data-a=type][data-t=livreur]');await pd.click('[data-a=entrer]');
+await pd.click('[data-a=dossier]');await pd.fill('[data-k=dident]','CI-778899');await pd.fill('[data-k=dperm]','P-12345');await pd.fill('[data-k=dplaq]','1234 AB 01');await pd.fill('[data-k=dassu]','2099-12-31');await pd.click('[data-a=envoyerdossier]');
+await pa.click('[data-a=tab][data-t=livreurs]');await pa.click('tr.k');await pa.click('[data-a=livstatut][data-v=valide]');await pd.click('[data-a=ligne]');
 await pd.waitForSelector('[data-a=accepter]',{timeout:6000});const offre=await pd.textContent('.ov .sheet');
 t("livreur : l'offre du portail arrive (produit à encaisser, numéro masqué)",offre.includes("à encaisser")&&offre.includes("Montant du colis")&&offre.includes("12\u00a0000")&&offre.includes("••"),offre.slice(0,200));
 await pd.screenshot({path:SP+"p4-offre.png"});await pd.click('[data-a=accepter]');
-await pf.waitForFunction(()=>document.body.textContent.includes("Livreur"),null,{timeout:6000}).catch(()=>{});
+await pf.waitForFunction(()=>document.querySelector("#app").textContent.includes("Livreur"),null,{timeout:6000}).catch(()=>{});
 await pf.click('[data-a=tab][data-t=livraisons]');await pf.waitForFunction(()=>document.querySelector("table")&&document.querySelector("table").textContent.includes("En route vers la collecte"),null,{timeout:6000});t("portail : statut « en route vers la collecte » en direct",true);
 /* collecte : mauvais code puis bon code */
 await pd.click('[data-a=arrive]');await pd.fill('[data-k=code]','0000');await pd.click('#dem');t("collecte : mauvais code refusé",(await toast(pd)).includes("incorrect"));
@@ -53,18 +56,22 @@ await pf.click('[data-a=tab][data-t=paiements]');
 await pf.waitForFunction(()=>document.querySelector("main").textContent.includes("12 000"),null,{timeout:6000});t("paiements : 12 000 F encaissés pour le fournisseur",true);
 await pf.screenshot({path:SP+"p5-paiements.png"});
 await pf.fill('[data-v=m]','999999');await pf.fill('[data-v=c]','0707070707');await pf.click('[data-a=demandervers]');t("reversement au-delà du dû refusé",(await toast(pf)).includes("dépasse"));
-await pf.fill('[data-v=m]','5000');await pf.click('[data-a=demandervers]');await pf.click('[data-a=validervers]');
-t("reversement impossible tant que les livreurs n'ont pas remis les fonds",(await toast(pf)).includes("pas encore remis"));
-await pd.click('[data-a=tab][data-t=gains]');await pd.click('[data-a=vers]');await pd.click('[data-a=envoyerv]');await pd.click('[data-a=validerv]');
-await pf.click('[data-a=tab][data-t=livraisons]');await pf.click('[data-a=tab][data-t=paiements]');await pf.click('[data-a=validervers]');
-await pf.waitForFunction(()=>document.querySelector("main").textContent.includes("Versé"),null,{timeout:4000});
+await pf.fill('[data-v=m]','5000');await pf.click('[data-a=demandervers]');
+await pa.click('[data-a=tab][data-t=finance]');await pa.click('[data-a=approuver][data-k=rev]');await pa.click('[data-a=executer][data-k=rev]');
+t("reversement impossible tant que les livreurs n'ont pas remis les fonds",(await toast(pa)).includes("pas encore remis"));
+await pd.click('[data-a=tab][data-t=gains]');await pd.click('[data-a=vers]');await pd.click('[data-a=envoyerv]');
+await pa.waitForSelector('[data-a=validervers]',{timeout:4000});await pa.click('[data-a=validervers]');t("versement du livreur validé par l'administration",(await toast(pa)).includes("validé"));
+await pa.click('[data-a=executer][data-k=rev]');
+await pf.click('[data-a=tab][data-t=livraisons]');await pf.click('[data-a=tab][data-t=paiements]');await pf.waitForFunction(()=>document.querySelector("main").textContent.includes("Versé"),null,{timeout:6000});
 t("reversement exécuté après remise des fonds par le livreur",(await pf.evaluate(()=>M.fondsTiers(ledger())))===7000);
 t("journal équilibré, fonds de tiers hors revenu",await pf.evaluate(()=>M.equilibre(ledger())&&M.revenuPropre(ledger())<2000));
 await pf.click('[data-a=tab][data-t=factures]');await pf.click('[data-a=facturer]');
 const fac=(await pf.evaluate(()=>LS.get("factures",[])))[0];t("facture périodique générée et numérotée",!!fac&&/^FAC-\d{4}-0001$/.test(fac.numero)&&fac.total===o2.devis.total,fac);
 await pf.click('[data-a=voirfac]');await pf.screenshot({path:SP+"p6-facture.png"});await pf.click('.pop [data-a=fermer]');
 t("la livraison facturée n'est plus proposée",(await pf.evaluate(()=>LIV.lire()[0].facture))===fac.numero);
-await pf.click('[data-a=payerfac]');t("facture payée : créance soldée",(await pf.evaluate(()=>M.creance(ledger(),P.org.id)))===0&&(await pf.textContent('main')).includes("Payée"));
+t("portail : plus de bouton de paiement de facture (réservé à l'administration)",!(await pf.$('[data-a=payerfac]')));
+await pa.click('[data-a=tab][data-t=finance]');await pa.fill('[data-ref]','VIR-2026-1');await pa.click('[data-a=payerfac]');
+await pf.waitForFunction(()=>document.querySelector("main").textContent.includes("Payée"),null,{timeout:6000});t("facture payée par l'administration : créance soldée",(await pf.evaluate(()=>M.creance(ledger(),P.org.id)))===0);
 /* --- import CSV --- */
 await pf.click('[data-a=tab][data-t=import]');await pf.click('[data-a=exemple]');await pf.click('[data-a=analyser]');
 const ap=await pf.textContent('main');t("import : aperçu — 2 lignes valides, 3 en erreur",ap.includes("2 valide(s), 3 en erreur")&&ap.includes("destination inconnue")&&ap.includes("téléphone invalide")&&ap.includes("doublon"),ap.slice(ap.indexOf("Aperçu"),ap.indexOf("Aperçu")+60));

@@ -135,5 +135,20 @@ const FIXE = (v) => ({ id: "p", version: 1, commission: { type: "fixe", valeur: 
   const c = { id: "R1", statut: "courier_to_pickup" }; M.changerStatut(c, "ready_for_assignment", "livreur", "réaffectation");
   t("statuts : réaffectation possible tant que le colis n'est pas collecté", c.statut === "ready_for_assignment" && !M.peutPasser("picked_up", "ready_for_assignment"));
 }
+
+/* --- Administration : éligibilité des livreurs, double approbation --- */
+{
+  const now = Date.parse("2026-11-12T10:00:00Z");
+  const L = [{ id: "a", type: "livreur", statut: "valide", dossier: { assurance_exp: "2027-01-01" } }, { id: "b", type: "chauffeur", statut: "valide", dossier: { assurance_exp: "2027-01-01" } },
+    { id: "c", type: "livreur", statut: "en_verification", dossier: { assurance_exp: "2027-01-01" } }, { id: "d", type: "livreur", statut: "valide", dossier: { assurance_exp: "2026-10-01" } }, { id: "e", type: "livreur", statut: "suspendu", dossier: { assurance_exp: "2027-01-01" } }, { id: "f", type: "livreur", statut: "valide" }];
+  t("éligibilité : une commande moto n'est proposée qu'aux livreurs validés, assurés, non suspendus", JSON.stringify(M.eligibles(L, { mode: "moto" }, now).map((x) => x.id)) === '["a"]');
+  t("éligibilité : une commande cargo n'est proposée qu'aux chauffeurs", JSON.stringify(M.eligibles(L, { mode: "cargo" }, now).map((x) => x.id)) === '["b"]');
+  t("documents : assurance expirée ou absente refusée", !M.docsValides(L[3], now) && !M.docsValides(L[5], now) && M.docsValides(L[0], now));
+  const d1 = { m: 50000 }, u1 = { id: "u1", nom: "Compta", role: "finance" }, u2 = { id: "u2", nom: "Direction", role: "admin" };
+  t("approbation : jusqu'au seuil, un contrôle suffit", M.approuver(d1, u1, 100000).pret === true);
+  const d2 = { m: 250000 };
+  t("approbation : au-delà du seuil, deux approbateurs distincts", M.approuver(d2, u1, 100000).pret === false && leve(() => M.approuver(d2, u1, 100000), "DEJA_APPROUVE") && M.approuver(d2, u2, 100000).pret === true);
+  t("approbation : approbateur obligatoire", leve(() => M.approuver({ m: 1 }, null, 100000), "APPROBATEUR_INCONNU"));
+}
 console.log(ok + " PASS, " + ko + " FAIL");
 process.exit(ko ? 1 : 0);
