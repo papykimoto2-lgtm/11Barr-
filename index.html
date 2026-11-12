@@ -61,6 +61,7 @@ const total=c=>c?devisC(c).total:0;
 function carte(){
  const el=$("#map"); if(!el || !window.L) return;
  const a=S.from,b=S.to;
+ if(window._11bMap && window._11bMap.getContainer()!==el){window._11bMap.remove();window._11bMap=null;window._11bLayers=null;}
  if(!window._11bMap){
    window._11bMap=L.map(el,{zoomControl:false,preferCanvas:true}).setView([5.35,-4.02],11);
    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
@@ -70,7 +71,6 @@ function carte(){
    window._11bLayers=L.layerGroup().addTo(window._11bMap);
  }
  const map=window._11bMap, layers=window._11bLayers;
- if(map.getContainer()!==el) return;
  layers.clearLayers();
  const valid=p=>p&&Number.isFinite(Number(p.la))&&Number.isFinite(Number(p.lo))&&Math.abs(Number(p.la))<=90&&Math.abs(Number(p.lo))<=180;
  const pts=[];
