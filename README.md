@@ -19,3 +19,6 @@ Compte client et authentification, base de données (commandes, chauffeurs, livr
 
 ## Fichiers
 `index.html` (toute l'application) · `manifest.webmanifest` · `sw.js` · `vercel.json` · `icons/`
+
+## Déploiement
+Site statique : aucune commande de build, dossier racine `./`, aucun framework (preset « Other » sur Vercel). Chaque push sur `main` redéploie automatiquement. `vercel.json` ajoute les en-têtes de sécurité et empêche la mise en cache du service worker.
