@@ -30,26 +30,27 @@ input.cd{font-size:30px;font-weight:900;letter-spacing:.4em;text-align:center}
 <body>
 <div id="app" aria-live="polite"></div>
 <script src="commun.js"></script>
+<script src="moteur.js"></script>
 <script>
 "use strict";
 /* 11Barré Pro — maquette de l'espace chauffeur et livreur.
    Données de démonstration. Si l'application client est ouverte sur le même appareil, ses commandes arrivent ici en direct
    (stockage local partagé) ; sinon, le bouton « Simuler une demande » en génère. Aucun serveur, aucun vrai paiement. */
-const COMM=.15,DELAI=30;
+const DELAI=30,PLAN=LS.get("plan",null)||M.PLAN_DEFAUT; /* mêmes paramètres que l'application client */
 const TYPES={chauffeur:{nom:"Chauffeur",veh:"Berline",tabs:["courses","cargo"],d:"Courses de personnes et transport de marchandises en voiture ou camionnette"},livreur:{nom:"Livreur à moto",veh:"Moto",tabs:["moto","livraison"],d:"Moto-taxi et livraison de colis"}};
-const TAR={courses:[700,190,1300,"Confort","car",0],moto:[300,100,500,"Moto-taxi","moto",0],livraison:[300,80,400,"Livraison à moto","moto",1],cargo:[2500,300,4200,"Express Cargo","van",1]}; /* mêmes valeurs que la grille de l'application client */
+const TAR={courses:["confort","Confort","car",0],moto:["mt","Moto-taxi","moto",0],livraison:["lm","Livraison à moto","moto",1],cargo:["ex","Express Cargo","van",1]}; /* catégorie du plan, libellé, icône, livraison */
 const PAYL={cash:"Espèces",orange:"Orange Money",wave:"Wave",mtn:"MTN MoMo"};
 const D={p:LS.get("profil",null),ligne:false,offre:null,course:null,tab:"accueil",hist:LS.get("ch_hist",[]),vers:LS.get("ch_vers",[]),sheet:null,f:{nom:"",tel:"",type:"chauffeur",code:"",ok:false,vm:"",vmode:"cash",vref:""}};
 const REFUSEES=new Set(),AUJ=()=>new Date().toLocaleDateString("fr-FR");
-const net=o=>Math.round(o.prix*(1-COMM)),cod=o=>o.colis?+o.colis.cod||0:0;
+const net=o=>M.repartition(PLAN,o.prix).livreur,cod=o=>o.colis?+o.colis.cod||0:0;
 const encPrix=o=>o.pay==="cash"||(o.colis&&o.colis.payeur==="dest"),aEnc=o=>(encPrix(o)?o.prix:0)+cod(o);
 const plaque=()=>String(1000+hash(D.p.nom)%9000)+" GH 01";
 const masque=t=>{const d=String(t||"").replace(/\D/g,"");return d.length>=8?d.slice(0,2)+" •• •• •• "+d.slice(-2):"numéro masqué"};
 const commande=()=>LS.get("commande",null),majCmd=(o,x)=>{if(!o.real)return;const c=commande();if(c&&c.id===o.id)LS.set("commande",Object.assign(c,x))};
 const match=o=>D.p&&TYPES[D.p.type].tabs.includes(o.tab);
 function offreSim(){const tabs=TYPES[D.p.type].tabs,tab=tabs[Math.floor(Math.random()*tabs.length)],L=LIEUX.filter(l=>l.n!=="Ma position (démo)"),a=L[Math.floor(Math.random()*L.length)];let b;do{b=L[Math.floor(Math.random()*L.length)]}while(b===a);
- const d=Math.max(.8,km(a,b)*1.35),t=TAR[tab],liv=!!t[5],prix=Math.max(t[2],r50(t[0]+t[1]*d)),pay=["cash","cash","wave","orange"][Math.floor(Math.random()*4)],avecCod=liv&&tab==="livraison"&&Math.random()<.4;
- return{id:"s"+Date.now(),real:false,tab,k:t[4],cat:t[3],de:a,a:b,prix,pay,payLib:PAYL[pay],km:+d.toFixed(1),du:Math.max(4,Math.round(d/(tab==="cargo"?20:30)*60)+3),ap:2+Math.floor(Math.random()*7),code:String(1000+Math.floor(Math.random()*9000)),liv,colis:liv?{n:"Awa K.",t:"0707070707",c:avecCod?"Vêtements":"Documents",cod:avecCod?15000:0,payeur:"exp",vit:"Standard"}:null}}
+ const d=Math.max(.8,km(a,b)*1.35),t=TAR[tab],liv=!!t[3],prix=M.devis(PLAN,{cat:t[0],km:d}).total,pay=["cash","cash","wave","orange"][Math.floor(Math.random()*4)],avecCod=liv&&tab==="livraison"&&Math.random()<.4;
+ return{id:"s"+Date.now(),real:false,tab,k:t[2],cat:t[1],de:a,a:b,prix,pay,payLib:PAYL[pay],km:+d.toFixed(1),du:Math.max(4,Math.round(d/(tab==="cargo"?20:30)*60)+3),ap:2+Math.floor(Math.random()*7),code:String(1000+Math.floor(Math.random()*9000)),liv,colis:liv?{n:"Awa K.",t:"0707070707",c:avecCod?"Vêtements":"Documents",cod:avecCod?15000:0,payeur:"exp",vit:"Standard"}:null}}
 /* Rendu */
 const bar=()=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="logo" style="font-size:20px"><i>11</i>Barré <small style="font-size:12px;font-weight:800;color:var(--mu)">Pro</small></span><span class="st ${D.ligne?"on":""}">${D.ligne?"● En ligne":"Hors ligne"}</span></div>`;
 function loginV(){const f=D.f;return`<div class="page"><span class="logo"><i>11</i>Barré <small style="font-size:14px;font-weight:800;color:var(--mu)">Pro</small></span><h1 style="font-size:26px;margin:18px 0 4px">Gagnez de l'argent avec 11Barré</h1><p class="nt">Chauffeur ou livreur : recevez des demandes, suivez vos gains.</p>
@@ -66,8 +67,11 @@ function carte(){const el=$("#map");if(!el)return;W=el.clientWidth||360;H=el.cli
 const avance=()=>{const c=D.course;if(!c)return 0;const n=Date.now();return c.step==="approche"?Math.min(.95,(n-c.ta)/30000):c.step==="cours"?Math.min(.95,(n-c.tc)/40000):1};
 const jour=()=>D.hist.filter(h=>h.d===AUJ());
 const sjour=l=>({n:l.length,net:l.reduce((t,h)=>t+h.net,0),comm:l.reduce((t,h)=>t+h.prix-h.net,0)});
-const solde=()=>D.hist.reduce((t,h)=>t+(h.ep?-(h.prix-h.net):h.net)-h.cod,0);
+/* Argent : tout vient du journal immuable partagé (moteur.js) ; rien n'est écrasé, les soldes se déduisent des écritures */
+const ledger=()=>M.chargerLivre(LS.get("ledger",null)),sauve=L=>LS.set("ledger",{tx:L.tx});
+const pos=()=>M.soldeLivreur(ledger(),D.p.id),solde=()=>pos().solde;
 const enAttente=()=>D.vers.reduce((t,v)=>t+v.m,0);
+if(D.p&&!D.p.id){D.p.id="L"+hash(D.p.nom).toString(36);LS.set("profil",D.p)}
 function accueilV(){const j=sjour(jour());let s;
  if(D.course)s=courseV();
  else s=`<div class="sheet"><h2 style="margin:0 0 4px">${D.ligne?'<span class="pulse"></span> En attente de demandes':"Vous êtes hors ligne"}</h2><p class="nt" style="margin:0 0 8px">${D.ligne?"Restez sur cet écran : une demande s'affichera ici avec le gain avant que vous acceptiez.":"Passez en ligne pour recevoir des demandes."}</p>
@@ -81,15 +85,15 @@ function courseV(){const c=D.course,liv=c.liv,mot=liv?"livraison":"course",f=ava
  if(c.step==="approche")b=`<div class="go"><a class="lnk" href="${nav}" target="_blank" rel="noopener">Naviguer</a><a class="lnk" href="tel:${tel}">Appeler</a></div><div class="go"><button class="btn" data-a="arrive">Je suis arrivé</button></div><p style="text-align:center;margin:6px 0 0"><button class="pay" style="justify-content:center;color:var(--er)" data-a="annuler">Annuler la ${mot}</button></p>`;
  else if(c.step==="arrive")b=`<label class="l">Code de confirmation du client<input class="fld cd" data-k="code" inputmode="numeric" maxlength="4" value="${esc(D.f.code)}" autocomplete="off" aria-label="Code à 4 chiffres"></label><p class="nt">Demandez le code au client avant de démarrer. <span class="chip">Démo : ${c.code}</span></p><div class="go"><button class="btn" id="dem" data-a="demarrer" ${D.f.code.length===4?"":"disabled"}>Démarrer la ${mot}</button></div><p style="text-align:center;margin:6px 0 0"><button class="pay" style="justify-content:center;color:var(--er)" data-a="annuler">Annuler la ${mot}</button></p>`;
  else if(c.step==="cours")b=`<div class="go"><a class="lnk" href="${nav}" target="_blank" rel="noopener">Naviguer</a><a class="lnk" href="tel:${tel}">Appeler</a></div><div class="go"><button class="btn" data-a="terminer">${liv?"Colis remis":"Terminer la course"}</button></div>`;
- else{const e=aEnc(c);b=`<div class="eb">Prix ${F(c.prix)}${cod(c)?` · montant du colis ${F(cod(c))}`:""}<br>Votre gain net : <b>${F(net(c))}</b> (commission de ${Math.round(COMM*100)} % retenue)</div>${e?`<label class="chk" style="display:flex;gap:10px;align-items:center;margin:10px 0;font-weight:700"><input type="checkbox" data-k="ok" ${D.f.ok?"checked":""} style="width:22px;height:22px"> J'ai encaissé ${F(e)} auprès du client</label>`:`<p class="nt">Déjà réglé par ${esc(c.payLib)} : rien à encaisser.</p>`}<div class="go"><button class="btn" id="enr" data-a="enregistrer" ${e&&!D.f.ok?"disabled":""}>Enregistrer</button></div>`}
+ else{const e=aEnc(c);b=`<div class="eb">Prix ${F(c.prix)}${cod(c)?` · montant du colis ${F(cod(c))}`:""}<br>Votre gain net : <b>${F(net(c))}</b> (commission de ${Math.round((PLAN.commission.valeur||0)*100)} % retenue)</div>${e?`<label class="chk" style="display:flex;gap:10px;align-items:center;margin:10px 0;font-weight:700"><input type="checkbox" data-k="ok" ${D.f.ok?"checked":""} style="width:22px;height:22px"> J'ai encaissé ${F(e)} auprès du client</label>`:`<p class="nt">Déjà réglé par ${esc(c.payLib)} : rien à encaisser.</p>`}<div class="go"><button class="btn" id="enr" data-a="enregistrer" ${e&&!D.f.ok?"disabled":""}>Enregistrer</button></div>`}
  const info=`<div class="hl"><span><small>${c.step==="approche"||c.step==="arrive"?"Prise en charge":"Destination"}</small><b>${esc(dest.n)}</b> · ${esc(dest.z)}</span><span><b>${F(net(c))}</b><small>gain net</small></span></div>${c.colis&&c.step!=="fin"?`<div class="nt" style="padding:6px 0">${esc(c.colis.c||"Colis")} · destinataire ${esc(c.colis.n||"—")}${cod(c)?` · à encaisser ${F(cod(c))}`:""}</div>`:""}`;
  return`<div class="sheet"><h2 style="margin:0 0 4px;font-size:20px">${ent}</h2><div class="scroll">${c.step==="fin"?"":info}${b}</div></div>`}
-function gainsV(){const j=sjour(jour()),s=solde(),att=enAttente();return`<div class="page"><h1 style="font-size:24px;margin:0 0 6px">Mes gains</h1><div class="kpi"><div><b>${F(j.net)}</b><span>gain net du jour</span></div><div><b>${j.n}</b><span>course${j.n>1?"s":""} aujourd'hui</span></div><div><b>${F(j.comm)}</b><span>commission du jour</span></div><div><b>${F(D.hist.reduce((t,h)=>t+h.net,0))}</b><span>total depuis le début</span></div></div>
-<div class="eb"><b>Solde avec 11Barré : <span class="${s<0?"ko":"ok"}">${s<0?"vous devez reverser "+F(-s):s>0?"11Barré vous doit "+F(s):"à jour"}</span></b><br><span class="nt">Les courses payées en espèces : vous gardez l'argent et reversez la commission${D.p.type==="livreur"?", plus le montant des colis encaissés":""}. Les courses payées par mobile : 11Barré vous reverse votre gain.</span></div>
-${att?`<p class="nt">Versement en validation : ${F(att)} (le solde change quand 11Barré valide).</p>`:""}${s<0?`<div class="go"><button class="btn" data-a="vers">Déclarer un versement</button></div>`:""}
+function gainsV(){const j=sjour(jour()),P=pos(),s=P.solde,att=enAttente();return`<div class="page"><h1 style="font-size:24px;margin:0 0 6px">Mes gains</h1><div class="kpi"><div><b>${F(j.net)}</b><span>gain net du jour</span></div><div><b>${j.n}</b><span>course${j.n>1?"s":""} aujourd'hui</span></div><div><b>${F(j.comm)}</b><span>commission du jour</span></div><div><b>${F(D.hist.reduce((t,h)=>t+h.net,0))}</b><span>total depuis le début</span></div></div>
+<div class="eb"><b>Solde avec 11Barré : <span class="${s<0?"ko":"ok"}">${s<0?"vous devez reverser "+F(-s):s>0?"11Barré vous doit "+F(s):"à jour"}</span></b><br><span class="nt">11Barré vous doit ${F(P.gains)} de gains · vous détenez ${F(P.especes)} en espèces. Les courses payées en espèces : vous gardez l'argent et reversez la commission${D.p.type==="livreur"?", plus le montant des colis encaissés":""}. Les courses payées par mobile : 11Barré vous reverse votre gain.</span></div>
+${D.vers.map((v,i)=>`<div class="hl"><span><b>${F(v.m)}</b> · ${esc(PAYL[v.mode]||v.mode)}<small>en validation${v.ref?" · réf. "+esc(v.ref):""} (le solde change quand 11Barré valide)</small></span><button class="lnk" style="flex:none;border:0;padding:8px 12px" data-a="validerv" data-i="${i}">Valider (démo)</button></div>`).join("")}${s<0?`<div class="go"><button class="btn" data-a="vers">Déclarer un versement</button></div>`:""}
 <div class="sec">Dernières courses</div>${D.hist.length?D.hist.slice(0,15).map(h=>`<div class="hl"><span><b>${esc(h.de)} → ${esc(h.a)}</b><small>${esc(h.s)} · ${esc(h.d)}${h.cod?" · colis "+F(h.cod):""}</small></span><b>${F(h.net)}</b></div>`).join(""):'<p class="nt">Aucune course pour le moment.</p>'}</div>`}
 function profilV(){return`<div class="page"><h1 style="font-size:24px;margin:0 0 6px">Mon profil</h1><div class="drv" style="margin:10px 0"><div class="av">${esc(D.p.nom[0]||"?")}</div><div><b>${esc(D.p.nom)}</b><br><span class="nt">${TYPES[D.p.type].nom} · ${esc(D.p.tel||"téléphone non renseigné")}</span><br><span class="plate">${plaque()}</span></div></div>
-<button class="opt" data-a="changer"><span class="t"><b>Passer en ${D.p.type==="chauffeur"?"livreur à moto":"chauffeur"}</b><small>Change les types de demandes reçues</small></span>›</button><a class="opt" style="color:inherit;text-decoration:none" href="index.html"><span class="t"><b>Espace client</b><small>Commander une course ou une livraison</small></span>›</a><button class="opt" data-a="raz"><span class="t"><b>Effacer mes courses de démonstration</b><small>Remet les gains à zéro</small></span>›</button><button class="opt" data-a="sortir"><span class="t"><b>Se déconnecter</b></span></button><p class="nt">Commission 11Barré : ${Math.round(COMM*100)} % du prix de la course (valeur de démonstration).</p></div>`}
+<button class="opt" data-a="changer"><span class="t"><b>Passer en ${D.p.type==="chauffeur"?"livreur à moto":"chauffeur"}</b><small>Change les types de demandes reçues</small></span>›</button><a class="opt" style="color:inherit;text-decoration:none" href="index.html"><span class="t"><b>Espace client</b><small>Commander une course ou une livraison</small></span>›</a><button class="opt" data-a="raz"><span class="t"><b>Effacer mes courses de démonstration</b><small>Remet les gains à zéro</small></span>›</button><button class="opt" data-a="sortir"><span class="t"><b>Se déconnecter</b></span></button><p class="nt">Commission 11Barré : ${Math.round((PLAN.commission.valeur||0)*100)} % du prix de la course (valeur de démonstration).</p></div>`}
 function offreV(){const o=D.offre,e=aEnc(o);return`<div class="ov"><div class="sheet" role="dialog" aria-label="Nouvelle demande"><span class="chip">${o.liv?"Livraison":"Course"} · ${esc(o.cat)}</span><h2 style="margin:8px 0 2px;font-size:20px">${esc(o.de.n)} → ${esc(o.a.n)}</h2><p class="nt" style="margin:0">${o.km} km · ≈ ${o.du} min · récupération à ${o.ap} min de vous</p>
 <div class="kpi"><div><b style="font-size:30px;line-height:1.1">${F(net(o))}</b><span>votre gain net</span></div><div><b>${e?F(e):"Déjà payé"}</b><span>${e?"à encaisser":"par "+esc(o.payLib)}</span></div></div>${o.colis?`<div class="eb">${esc(o.colis.c||"Colis")} · destinataire ${esc(o.colis.n||"—")} (${masque(o.colis.t)})${cod(o)?`<br>Montant du colis à encaisser : <b>${F(cod(o))}</b>`:""}</div>`:""}
 <div class="bar" aria-hidden="true"><i id="cdb" style="width:100%"></i></div><p class="nt" style="margin:0 0 6px">Répondre dans <b id="cdn">${DELAI}</b> s</p><div class="go"><button class="btn sec2" data-a="refuser">Refuser</button><button class="btn" data-a="accepter">Accepter</button></div></div></div>`}
@@ -108,7 +112,7 @@ const toast=m=>{const t=document.createElement("div");t.id="toast";t.textContent
 /* Actions */
 const A={
  type(t){D.f.type=t.dataset.t;render()},
- entrer(){const f=D.f;if(f.nom.trim().length<2)return toast("Indiquez votre nom");D.p={nom:f.nom.trim(),tel:f.tel.trim(),type:f.type};LS.set("profil",D.p);render()},
+ entrer(){const f=D.f;if(f.nom.trim().length<2)return toast("Indiquez votre nom");D.p={id:"L"+Date.now().toString(36),nom:f.nom.trim(),tel:f.tel.trim(),type:f.type};LS.set("profil",D.p);render()},
  ligne(){D.ligne=!D.ligne;if(D.ligne)LS.set("chauffeur_ligne",Date.now());else LS.set("chauffeur_ligne",0);render()},
  simuler(){if(D.offre||D.course)return;D.offre=Object.assign(offreSim(),{t0:Date.now()});render()},
  accepter(){const o=D.offre;if(!o)return;if(o.real){const c=commande();if(!c||c.id!==o.id||c.statut!=="recherche"){D.offre=null;render();toast("Cette demande n'est plus disponible");return}LS.set("commande",Object.assign(c,{statut:"acceptee",chauffeur:[D.p.nom,TYPES[D.p.type].veh,plaque(),4.9]}))}
@@ -120,13 +124,16 @@ const A={
  arrive(){D.course.step="arrive";D.f.code="";majCmd(D.course,{statut:"arrivee"});render()},
  demarrer(){const c=D.course;if(D.f.code!==c.code)return toast("Code incorrect");c.step="cours";c.tc=Date.now();majCmd(c,{statut:"demarree"});render()},
  terminer(){const c=D.course;c.step="fin";D.f.ok=false;majCmd(c,{statut:"terminee"});render()},
- enregistrer(){const c=D.course,e=aEnc(c);if(e&&!D.f.ok)return;D.hist.unshift({id:c.id,de:c.de.n,a:c.a.n,prix:c.prix,net:net(c),cod:cod(c),ep:encPrix(c),s:c.cat,d:AUJ()});D.hist=D.hist.slice(0,60);LS.set("ch_hist",D.hist);const g=net(c);D.course=null;render();toast("Enregistré · +"+F(g))},
+ enregistrer(){const c=D.course,e=aEnc(c);if(e&&!D.f.ok)return;
+  try{const L=ledger(),pm=cod(c)>0?"cod":(encPrix(c)?"cash":"numerique");M.cloturer(L,{ref:c.id,plan:PLAN,total:c.prix,paiement:pm,transport:encPrix(c)?"collecte":"numerique",produit:cod(c),fournisseur:"exp-"+hash((c.colis&&c.colis.n)||"x").toString(36),livreur:D.p.id,at:Date.now()});sauve(L)}catch(x){return toast(x.message)}
+  D.hist.unshift({id:c.id,de:c.de.n,a:c.a.n,prix:c.prix,net:net(c),cod:cod(c),ep:encPrix(c),s:c.cat,d:AUJ()});D.hist=D.hist.slice(0,60);LS.set("ch_hist",D.hist);const g=net(c);D.course=null;render();toast("Enregistré · +"+F(g))},
  tab(t){D.tab=t.dataset.t;render()},
  sos(){D.sheet="sos";render()},oclose2(){D.sheet=null;render()},
  oclose(t,e){if(e.target.closest("[data-stop]")&&!e.target.closest("[data-a]:not([data-a=oclose])"))return;D.sheet=null;render()},
  changer(){D.p.type=D.p.type==="chauffeur"?"livreur":"chauffeur";LS.set("profil",D.p);render();toast("Profil : "+TYPES[D.p.type].nom)},
- raz(){D.hist=[];D.vers=[];LS.set("ch_hist",[]);LS.set("ch_vers",[]);render();toast("Courses de démonstration effacées")},
+ raz(){D.hist=[];D.vers=[];LS.set("ch_hist",[]);LS.set("ch_vers",[]);LS.set("ledger",null);render();toast("Courses de démonstration effacées")},
  sortir(){D.p=null;D.ligne=false;LS.set("profil",null);LS.set("chauffeur_ligne",0);render()},
+ validerv(t){const i=+t.dataset.i,v=D.vers[i];if(!v)return;try{const L=ledger();M.verser(L,{ref:"v"+Date.now(),livreur:D.p.id,montant:v.m,mode:v.mode,reference:v.ref});sauve(L);D.vers.splice(i,1);LS.set("ch_vers",D.vers);render();toast("Versement validé (démo)")}catch(e){toast(e.message)}},
  vers(){D.f.vm="";D.f.vref="";D.sheet="vers";render()},vmode(t){D.f.vmode=t.dataset.m;render()},
  envoyerv(){const m=Math.round(+D.f.vm||0),mob=D.f.vmode!=="cash";if(m<=0)return toast("Indiquez le montant");if(m>-solde())return toast("Le montant dépasse ce que vous devez");if(mob&&D.f.vref.trim().length<4)return toast("Indiquez la référence de la transaction");if(mob&&D.vers.some(v=>v.ref&&v.ref===D.f.vref.trim()))return toast("Cette référence a déjà été utilisée");D.vers.push({m,mode:D.f.vmode,ref:D.f.vref.trim()});LS.set("ch_vers",D.vers);D.sheet=null;render();toast("Versement déclaré, en validation")}};
 document.addEventListener("click",e=>{const t=e.target.closest("[data-a]");if(!t)return;const f=A[t.dataset.a];if(f)f(t,e)});
