@@ -105,3 +105,15 @@ body:has(main) .tabs button.on{background:#fff8df!important;color:#172235!import
   th,td{padding:10px 8px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Style sobre : icônes en traits, sans cercles ni dégradés décoratifs */
+.client .tile:before,.client .tile:after,.client .wel:after{display:none!important}
+.client .tile{border-radius:14px;box-shadow:none;border:1px solid #e3e8ef;min-height:132px}
+.client .tile svg{width:100px;height:50px;top:12px;right:8px;opacity:1}
+.client .tile.big{background:#ffc928;border-color:#ffc928;box-shadow:none}
+.client .tile.big span{color:#4a3d12}
+.client .cat{border-radius:12px}
+.client .cat svg{height:42px}
+.client .wel{background:#172235;box-shadow:none;border:0;border-radius:14px}
+.client .search,.client .loc,.client .ib{box-shadow:none;border-radius:12px}
+.client .ov .sheet{border-radius:16px 16px 0 0}
