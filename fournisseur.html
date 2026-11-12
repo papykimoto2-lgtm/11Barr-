@@ -12,7 +12,7 @@
 /* ===== KIT UX partagé (identique dans fournisseur.html et admin.html) ===== */
 :root{color-scheme:light dark;--bg:#f4f1ea;--card:#fff;--ink:#0d1b2a;--mu:#556072;--acc:#ffc21a;--accink:#1a1300;--ok:#0f7a4b;--er:#b3261e;--wa:#8a5200;--bl:#1c5fb8;--line:#ddd7c8;--bd:#808a98;--soft:#efeadf;--ring:#1c5fb8;--onc:#fff}
 @media (prefers-color-scheme:dark){:root{--bg:#0b141f;--card:#142233;--ink:#f2f4f7;--mu:#a9b5c5;--line:#2a3b52;--bd:#6f8299;--soft:#1b2c42;--ok:#3bbf86;--er:#ff8a80;--wa:#ffb44d;--bl:#8bb8ff;--ring:#ffc21a;--onc:#06121f}}
-html{scroll-padding-bottom:84px;-webkit-text-size-adjust:100%}
+html{scroll-padding-bottom:calc(84px + var(--nav-extra,0px));-webkit-text-size-adjust:100%}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;font:16px/1.45 system-ui,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);overflow-wrap:anywhere}
 button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}
@@ -66,7 +66,7 @@ th .sb{background:none;border:0;font:inherit;font-weight:700;color:var(--mu);pad
 .pop-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.pop-h h1{margin:0;font-size:22px}
 .x{flex:none;width:44px;height:44px;border-radius:12px;border:0;background:var(--soft);font-size:20px;line-height:1;margin:-6px -6px 0 0}
 .pop-f{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-@media (max-width:640px){.ov{padding:0}.pop{max-width:none;min-height:100%;border-radius:0;padding:14px 14px 18px;margin:0}.pop-f{position:sticky;bottom:0;background:var(--card);padding:10px 0 4px;border-top:1px solid var(--line)}.pop-f .btn{flex:1 1 140px}}
+@media (max-width:640px){.ov{padding:0}.pop{max-width:none;min-height:100%;border-radius:0;padding:14px 14px 18px;margin:0}.pop-f{position:sticky;bottom:0;background:var(--card);padding:10px 0 calc(4px + var(--nav-extra,0px));border-top:1px solid var(--line)}.pop-f .btn{flex:1 1 140px}}
 .hl{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;padding:7px 0;border-bottom:1px solid var(--line)}.hl>b{text-align:right;margin-left:auto}
 .tl{list-style:none;margin:6px 0;padding:0 0 0 14px;border-left:3px solid var(--line)}.tl li{padding:3px 0}.tl small{color:var(--mu)}
 .code{font-size:24px;font-weight:900;letter-spacing:.3em;background:var(--soft);border-radius:10px;padding:2px 12px;display:inline-block}
@@ -79,7 +79,7 @@ th .sb{background:none;border:0;font:inherit;font-weight:700;color:var(--mu);pad
 #toast{background:var(--ink);color:var(--card);padding:11px 18px;border-radius:14px;font-size:15px;font-weight:600;max-width:560px;box-shadow:0 6px 24px rgba(0,0,0,.3)}
 .only-print{display:none}
 @media (max-width:640px){
- nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:15;border-top:1px solid var(--line);border-bottom:0;box-shadow:0 -4px 14px rgba(0,0,0,.14);padding:0 4px;scroll-snap-type:x proximity}
+ nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:15;border-top:1px solid var(--line);border-bottom:0;box-shadow:0 -4px 14px rgba(0,0,0,.14);padding:0 4px var(--nav-extra,0px);scroll-snap-type:x proximity}
  nav.tabs button{min-height:58px;padding:6px 14px;border-bottom:0;border-top:3px solid transparent;scroll-snap-align:center}nav.tabs button.on{border-top-color:var(--acc)}
  main{padding:12px 12px 90px}#tz{bottom:76px}h1{font-size:22px}
  .sortbar{display:flex}

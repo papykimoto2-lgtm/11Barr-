@@ -1,3 +1,7 @@
+/* Barre de navigation Android : en application installée (plein écran), elle recouvre parfois le bas de la page sans que le navigateur
+   déclare de marge de sécurité. On réserve alors une marge de 48 px en bas (variable CSS --nav-extra) pour que les boutons restent atteignables. */
+(function(){try{const m=q=>matchMedia(q).matches,plein=m("(display-mode: standalone)")||m("(display-mode: fullscreen)")||m("(display-mode: minimal-ui)")||navigator.standalone===true;
+ if(plein&&/Android/i.test(navigator.userAgent))document.documentElement.style.setProperty("--nav-extra","48px")}catch(e){}})();
 /* Socle commun 11Barré (application client et espace chauffeur/livreur) : utilitaires, lieux de démonstration, carte schématique. */
 const $=s=>document.querySelector(s),esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const F=n=>Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g," ")+" F";
