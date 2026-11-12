@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="commun.css">
  <link rel="stylesheet" href="modern-ui.css">
   <link rel="stylesheet" href="premium-ui.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body class="client">
 <div id="app"></div>
@@ -20,6 +21,7 @@
 <noscript><p style="padding:20px">11Barré a besoin de JavaScript pour fonctionner.</p></noscript>
 <script src="commun.js"></script>
 <script src="moteur.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 "use strict";
 /* 11Barré — maquette interactive du parcours client (courses et livraison).
@@ -56,14 +58,41 @@ const prixBase=c=>c.ind?0:M.devis(PLAN,{cat:c.id,km:dist()}).total;
 const approche=c=>2+hash((S.from?S.from.n:"")+c.id)%8;
 const duree=()=>Math.max(4,Math.round(dist()/SERV[S.tab].v*60)+3);
 const total=c=>c?devisC(c).total:0;
-function carte(){const el=$("#map");if(!el)return;W=el.clientWidth||360;H=el.clientHeight||300;const a=S.from,b=S.to;if(!a||!b){el.innerHTML=`<svg viewBox="0 0 ${W} ${H}">${fond()}</svg>`;return}
- const p=proj(a,b),A=p(a),B=p(b),M=[B[0],A[1]],pts=[A,M,B],route=pts.map((q,i)=>(i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1)).join(" ");
- const r=S.run,eta=r&&r.step!=="search"?r.eta:null;let car="",bubble="",mover=null;
- if(r){const dS=[[A[0]-70,A[1]-55],[A[0]-70,A[1]],A];if(r.step==="approach")mover=along(dS,r.f);else if(r.step==="arrived")mover={x:A[0],y:A[1],ang:0};else if(r.step==="ride")mover=along(pts,r.f)}
- if(mover)car=`<g transform="translate(${mover.x.toFixed(1)} ${mover.y.toFixed(1)}) rotate(${(mover.ang+90).toFixed(0)})"><rect x="-8" y="-14" width="16" height="28" rx="6" fill="#0d1b2a" stroke="#fff" stroke-width="2"/><rect x="-5" y="-6" width="10" height="7" rx="2" fill="#ffc21a"/></g>`;
- const lab=r&&r.step==="ride"?"arrivée "+hh(Math.max(0,r.etaLeft)):(r&&r.step==="approach"?r.etaLeft+" min":(S.ph==="trip"?"arrivée "+hh(duree()+approche(catCur()||{id:"x"})):""));
- if(lab){const AN=r&&r.step==="approach"?A:B;bubble=`<g transform="translate(${Math.min(Math.max(AN[0],64),W-64)} ${Math.max(AN[1]-34,22)})"><rect x="-56" y="-18" width="112" height="30" rx="15" fill="${r&&r.step==="approach"?"#ff5a36":"#0d1b2a"}"/><text y="3" text-anchor="middle" fill="#fff" font-size="14" font-weight="700" font-family="system-ui">${esc(lab)}</text></g>`}
- el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Itinéraire de ${esc(a.n)} à ${esc(b.n)}">${fond()}<path d="${route}" stroke="#fff" stroke-width="11" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="${route}" pathLength="100" stroke="var(--route)" stroke-width="6" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="${route}" pathLength="100" stroke="#f5a300" stroke-width="6" fill="none" stroke-dasharray="0 52 16 40"/><circle cx="${A[0]}" cy="${A[1]}" r="9" fill="#fff" stroke="#0d1b2a" stroke-width="4"/><circle cx="${B[0]}" cy="${B[1]}" r="9" fill="#fff" stroke="#ff5a36" stroke-width="4"/>${bubble}${car}</svg>`}
+function carte(){
+ const el=$("#map"); if(!el || !window.L) return;
+ const a=S.from,b=S.to;
+ if(!window._11bMap){
+   window._11bMap=L.map(el,{zoomControl:false,preferCanvas:true}).setView([5.35,-4.02],11);
+   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+     maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+   }).addTo(window._11bMap);
+   L.control.zoom({position:"bottomright"}).addTo(window._11bMap);
+   window._11bLayers=L.layerGroup().addTo(window._11bMap);
+ }
+ const map=window._11bMap, layers=window._11bLayers;
+ if(map.getContainer()!==el) return;
+ layers.clearLayers();
+ const valid=p=>p&&Number.isFinite(Number(p.la))&&Number.isFinite(Number(p.lo))&&Math.abs(Number(p.la))<=90&&Math.abs(Number(p.lo))<=180;
+ const pts=[];
+ if(valid(a)){
+   const p=[Number(a.la),Number(a.lo)];pts.push(p);
+   L.marker(p,{title:"Départ : "+a.n}).bindPopup("<strong>Départ</strong><br>"+esc(a.n)+(S.gps?"<br><small>Position GPS du client</small>":"<br><small>Lieu sélectionné</small>")).addTo(layers);
+ }
+ if(valid(b)){
+   const p=[Number(b.la),Number(b.lo)];pts.push(p);
+   L.marker(p,{title:"Destination : "+b.n}).bindPopup("<strong>Destination</strong><br>"+esc(b.n)).addTo(layers);
+ }
+ if(pts.length===2){
+   L.polyline(pts,{color:"#f5a300",weight:5,opacity:.9,dashArray:"9 9"}).addTo(layers);
+   map.fitBounds(L.latLngBounds(pts).pad(.22),{maxZoom:14});
+ }else if(pts.length===1){map.setView(pts[0],15)}
+ else {map.setView([5.35,-4.02],11)}
+ if(S.run&&S.run.step==="approach"&&pts.length){
+   /* Le chauffeur reste fictif dans cette version : aucun faux marqueur live n'est affiché. */
+   const elInfo=document.createElement("div");
+ }
+ setTimeout(()=>map.invalidateSize({pan:false}),80);
+}
 /* Rendu */
 const bar=(l,rt)=>`<div class="top"><div>${l}</div>${rt||""}</div>`;
 const WEL=[["Bienvenue sur 11Barré","Commandez une course en voiture ou à moto. Le prix et le délai s'affichent avant de confirmer : pas de surprise."],["Envoyez un colis","Faites livrer un colis à moto ou en camionnette. Avec le paiement à la livraison, le livreur encaisse l'argent pour vous."],["Payez comme vous voulez","Espèces, Orange Money, Wave ou MTN MoMo. C'est une démonstration : aucun paiement réel et des chauffeurs fictifs. Si aucun chauffeur n'est en ligne, une course de démonstration prend le relais (au bout de 20 secondes si un chauffeur a été prévenu)."]];
