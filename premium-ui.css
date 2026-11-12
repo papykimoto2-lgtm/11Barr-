@@ -105,3 +105,108 @@ body:has(main) .tabs button.on{background:#fff8df!important;color:#172235!import
   th,td{padding:10px 8px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* 11Barré — Booking experience V2
+   Parcours client : carte, sélection du service, récapitulatif et action de commande.
+   Styles uniquement ; aucune logique de réservation n'est modifiée. */
+.client .col{background:#edf2f5}
+.client #map{
+  flex:1 1 34%;min-height:190px;
+  background:
+    radial-gradient(ellipse at 78% 18%,rgba(255,255,255,.9) 0 8%,transparent 8.5%),
+    linear-gradient(135deg,#e9f0e9 0%,#e3edf0 48%,#e8eee8 100%);
+  overflow:hidden;
+}
+.client #map:after{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.36;
+  background-image:linear-gradient(28deg,transparent 47%,#fff 48%,#fff 50%,transparent 51%),
+    linear-gradient(112deg,transparent 47%,#fff 48%,#fff 50%,transparent 51%);
+  background-size:118px 92px,150px 116px;
+}
+.client #map svg{position:relative;z-index:1;filter:saturate(.82)}
+.client .back{
+  top:calc(max(14px,env(safe-area-inset-top)) + 8px);left:16px;
+  width:46px;height:46px;border-radius:15px;background:#fff;
+  box-shadow:0 7px 22px rgba(18,35,59,.14)!important;
+}
+.client .col .sheet{
+  max-height:70%;padding:13px 18px calc(max(14px,env(safe-area-inset-bottom)) + var(--nav-extra,0px));
+  border-radius:26px 26px 0 0!important;
+  box-shadow:0 -12px 38px rgba(19,38,65,.12)!important;
+}
+.client .col .sheet:before{width:40px;height:4px;background:#dce3eb;margin-bottom:10px}
+.client .od{gap:12px;padding:10px 2px;min-height:62px}
+.client .od .ic{
+  width:39px;height:39px;border-radius:13px;background:#fff;color:#b98600;
+  border:1px solid #edf0f4;box-shadow:0 2px 7px rgba(20,34,56,.045);
+}
+.client .od small{font-size:10px;letter-spacing:.075em;text-transform:uppercase;font-weight:850;color:#8995a5}
+.client .od b{font-size:14px;font-weight:800;letter-spacing:-.2px;color:#17263d}
+.client .od+.od{border-top:1px solid #edf0f4}
+.client .tabs{gap:7px;padding:11px 0 9px;scrollbar-width:none}
+.client .tabs::-webkit-scrollbar,.client .cats::-webkit-scrollbar{display:none}
+.client .tab{
+  min-height:38px;padding:8px 13px;border:1px solid #e8edf3;border-radius:999px!important;
+  background:#f7f9fb;color:#6e7c90;font-size:12px;font-weight:800;
+}
+.client .tab.on{background:#17263d!important;border-color:#17263d;color:#fff!important}
+.client .cats{gap:9px;padding:5px 2px 12px}
+.client .cat{
+  width:126px;min-height:128px;padding:10px 11px;border:1px solid #e6ebf2!important;
+  border-radius:17px!important;background:#f8fafc;text-align:left;
+}
+.client .cat svg{height:42px;margin-bottom:2px}
+.client .cat small{font-size:10px;font-weight:800;color:#8b97a7}
+.client .cat b{font-size:13px;letter-spacing:-.2px;margin:2px 0}
+.client .cat .p{font-size:16px;font-weight:900;color:#17263d}
+.client .cat.on{
+  border:2px solid #17263d!important;background:#fff;
+  box-shadow:0 6px 16px rgba(18,36,60,.09);
+}
+.client .dispo{
+  margin:5px 1px 7px;padding:9px 11px;border-radius:12px;
+  background:#f5f8f5;color:#52715f;font-size:10px;line-height:1.45;
+}
+.client .pay{
+  min-height:49px;margin-top:4px;padding:8px 11px;border:1px solid #e9edf3;
+  border-radius:14px;background:#f8fafc;color:#27374d;font-size:12px;font-weight:750;
+}
+.client .pay>svg{width:25px;height:25px}
+.client .pay .chip{background:#fff;border:1px solid #e9edf3;color:#34445a}
+.client .col .cta{
+  position:relative;margin:7px -2px 0;padding:9px 2px 2px;
+  background:#fff;gap:9px;align-items:center;
+}
+.client .col .cta .btn{
+  min-height:53px;border-radius:15px;font-size:14px;font-weight:900;
+  letter-spacing:-.15px;background:linear-gradient(135deg,#ffda62,#ffc629);
+  box-shadow:0 8px 18px rgba(220,164,18,.22);
+}
+.client .col .cta .mini{
+  width:52px;height:52px;border:1px solid #e8edf3;background:#f6f8fa;border-radius:15px;
+}
+.client .ov .sheet{padding-left:20px;padding-right:20px}
+.client .ov h2{font-size:21px;font-weight:900;letter-spacing:-.65px}
+.client .ov .sec{margin:18px 0 7px}
+.client .ov .opt{min-height:55px}
+.client .ov .hl{font-size:13px;padding:9px 0}
+.client .ov .hl b{font-weight:850}
+.client .full header{padding-left:16px;padding-right:16px}
+.client .full header input[type=search]{height:50px;border-radius:15px!important;background:#f7f9fb}
+@media(min-width:700px){
+  .client #app{max-width:100%;display:grid;grid-template-columns:minmax(360px,520px) minmax(360px,1fr);grid-template-rows:100%;align-items:stretch}
+  .client #app>.top{grid-column:1;grid-row:1;align-self:start}
+  .client #app>.col{grid-column:2;grid-row:1;border-left:1px solid #e5eaf0}
+  .client #app>.home{grid-column:1;grid-row:1;padding-top:86px}
+  .client .col .sheet{max-height:68%;max-width:620px;align-self:center;margin:0 auto 18px;border-radius:26px!important}
+  .client #map{min-height:280px}
+}
+@media(max-height:700px) and (max-width:699px){
+  .client .col .sheet{max-height:76%;padding-top:8px}
+  .client .od{min-height:53px;padding:7px 2px}
+  .client .cat{min-height:112px}
+}
+@media(prefers-reduced-motion:reduce){
+  .client .col .sheet,.client .cat,.client .tab{transition:none!important}
+}
