@@ -49,8 +49,13 @@
       ex: { mode: "cargo", liv: true, base: 2500, km: 300, min: 4200 }, ca: { mode: "cargo", liv: true, base: 6000, km: 600, min: 12000 }
     },
     vitesses: { exp: 1.6, std: 1, grp: 0.85, diff: 0.7 },
-    options: { porte_a_porte: 200 },
-    seuils: { moto_poids_max_kg: 10, moto_volume_max_m3: 0.08, utilitaire_poids_max_kg: 500, utilitaire_volume_max_m3: 4, approbation_double: 100000, delai_affectation_min: 10 },
+    options: { porte_a_porte: 200, preuve_photo_livraison: false },
+    seuils: {
+      moto_poids_max_kg: 10, moto_volume_max_m3: 0.08, utilitaire_poids_max_kg: 500, utilitaire_volume_max_m3: 4, approbation_double: 100000, delai_affectation_min: 10,
+      /* affectation automatique : tout est paramétrable, rien n'est codé en dur dans les fonctions */
+      delai_offre_s: 30, en_ligne_max_s: 20, missions_max: 1, distance_ref_km: 25, proximite_inconnue: 0.25,
+      score_proximite: 0.5, score_fiabilite: 0.3, score_charge: 0.2, fiabilite_defaut: 0.8, fiabilite_min_offres: 3, poids_reussite: 0.4
+    },
     commission: { type: "pourcentage", valeur: 0.15 }
   });
   const arr = (n, pas) => Math.round(n / pas) * pas;
@@ -214,6 +219,123 @@
   M.rapprocher = (L, montantPrestataire) => {
     const c = M.solde(L, "caisse"), journal = c.debit - c.credit, ecart = montantPrestataire - journal;
     return { journal, prestataire: montantPrestataire, ecart, statut: ecart === 0 ? "ok" : "ecart" };
+  };
+
+
+  /* ---------- 5. Affectation intelligente : capacités, filtres éliminatoires, score, historique des offres ---------- */
+  /** Paramètre du plan, avec repli sur le plan par défaut (un plan ancien ne contient pas les nouveaux seuils). */
+  M.seuil = (plan, k) => (plan && plan.seuils && plan.seuils[k] != null ? plan.seuils[k] : M.PLAN_DEFAUT.seuils[k]);
+  M.STATUTS_EN_COURS = ["assigned", "courier_to_pickup", "picked_up", "in_transit", "arrived"];
+  M.distanceKm = (a, b) => {
+    const t = (x) => x * Math.PI / 180, dl = t(b.la - a.la), dn = t(b.lo - a.lo), q = Math.sin(dl / 2) ** 2 + Math.cos(t(a.la)) * Math.cos(t(b.la)) * Math.sin(dn / 2) ** 2;
+    return 2 * 6371 * Math.asin(Math.sqrt(q));
+  };
+  /** Capacités d'un livreur : celles du dossier ; à défaut, seule la moto reçoit les valeurs du plan (jamais de capacité déduite d'une simple catégorie de camion). */
+  M.capaciteLivreur = (l, plan) => {
+    const d = (l && l.dossier) || {}, moto = !!l && l.type === "livreur";
+    return {
+      kg: d.capacite_kg > 0 ? +d.capacite_kg : (moto ? M.seuil(plan, "moto_poids_max_kg") : 0),
+      m3: d.capacite_m3 > 0 ? +d.capacite_m3 : (moto ? M.seuil(plan, "moto_volume_max_m3") : 0),
+      declaree: !!(d.capacite_kg > 0 || d.capacite_m3 > 0)
+    };
+  };
+  const besoin = (cmd) => { const c = (cmd && cmd.colis) || {}; return { kg: +c.poids || +c.poids_kg || 0, m3: +c.volume || +c.volume_m3 || 0 }; };
+  /** Raison d'incompatibilité (texte) ou chaîne vide si le colis rentre. */
+  M.capaciteRaison = (l, cmd, plan) => {
+    const c = M.capaciteLivreur(l, plan), b = besoin(cmd);
+    if (b.kg > c.kg) return "Poids " + b.kg + " kg supérieur à la capacité (" + c.kg + " kg)";
+    if (b.m3 > c.m3) return "Volume " + b.m3 + " m³ supérieur à la capacité (" + c.m3 + " m³)";
+    return "";
+  };
+  M.capaciteOk = (l, cmd, plan) => M.capaciteRaison(l, cmd, plan) === "";
+  /** Présence : l'horodatage en_ligne_a doit être récent. */
+  M.enLigne = (l, now, plan) => !!l && l.en_ligne_a > 0 && (now || Date.now()) - l.en_ligne_a <= M.seuil(plan, "en_ligne_max_s") * 1000;
+  /** Statistiques d'un livreur, déduites de l'historique des offres de toutes les commandes. */
+  M.statsLivreur = (id, commandes, plan) => {
+    let proposees = 0, acceptees = 0, refusees = 0, expirees = 0, abandons = 0, livrees = 0;
+    (commandes || []).forEach((c) => {
+      (c.offres || []).forEach((o) => {
+        if (o.livreur !== id) return;
+        proposees++;
+        if (o.statut === "acceptee") acceptees++; else if (o.statut === "refusee") { refusees++; if (/^Abandon/.test(o.motif || "")) abandons++; } else if (o.statut === "expiree") expirees++;
+      });
+      if (c.statut === "delivered" && c.chauffeur && c.chauffeur.id === id) livrees++;
+    });
+    const decisives = acceptees + refusees + expirees, taux_acceptation = decisives ? acceptees / decisives : null;
+    const reussite = livrees + abandons ? livrees / (livrees + abandons) : 1;
+    const acc = decisives >= M.seuil(plan, "fiabilite_min_offres") ? taux_acceptation : M.seuil(plan, "fiabilite_defaut");
+    const w = M.seuil(plan, "poids_reussite");
+    return { proposees, acceptees, refusees, expirees, abandons, livrees, decisives, taux_acceptation, taux_reussite: reussite, fiabilite: (1 - w) * acc + w * reussite };
+  };
+  /** Charge actuelle : missions en cours + offre en attente sur une autre commande. */
+  M.chargeLivreur = (id, commandes, ignorer) => (commandes || []).filter((c) => c.id !== ignorer && ((c.chauffeur && c.chauffeur.id === id && M.STATUTS_EN_COURS.includes(c.statut)) || (c.statut === "ready_for_assignment" && c.offre_courante && c.offre_courante.livreur === id))).length;
+  const MOTIFS = { non_valide: "Dossier non validé", documents: "Documents non en règle (assurance)", type: "Mauvais type de véhicule", capacite: "Capacité insuffisante", hors_ligne: "Hors ligne", deja_refuse: "A déjà refusé cette commande", deja_expire: "N'a pas répondu à temps", deja_pris: "A déjà eu cette commande", occupe: "Déjà occupé" };
+  M.MOTIFS_ELIMINATION = MOTIFS;
+  /** Classe les candidats pour une commande. Filtres éliminatoires d'abord, puis score (proximité au point de collecte, fiabilité, charge).
+      ctx = { plan, now, commandes }. Retourne { retenus: [{ livreur, score, distance_km, fiabilite, charge }] du meilleur au moins bon, elimines: [{ livreur, motifs: [code] }] }. */
+  M.classer = (candidats, cmd, ctx) => {
+    ctx = ctx || {}; const plan = ctx.plan, now = ctx.now || Date.now(), cmds = ctx.commandes || [], depuis = cmd.relance_at || 0;
+    const prec = (cmd.offres || []).filter((o) => (o.at || 0) >= depuis), retenus = [], elimines = [];
+    const sw = M.seuil(plan, "score_proximite"), fw = M.seuil(plan, "score_fiabilite"), cw = M.seuil(plan, "score_charge"), tot = (sw + fw + cw) || 1;
+    (candidats || []).forEach((l) => {
+      const m = [], mine = prec.filter((o) => o.livreur === l.id);
+      if (l.statut !== "valide") m.push("non_valide");
+      if (!M.docsValides(l, now)) m.push("documents");
+      if ((cmd.mode === "moto") !== (l.type === "livreur")) m.push("type");
+      if (!M.capaciteOk(l, cmd, plan)) m.push("capacite");
+      if (!M.enLigne(l, now, plan)) m.push("hors_ligne");
+      if (mine.some((o) => o.statut === "refusee")) m.push("deja_refuse");
+      else if (mine.some((o) => o.statut === "expiree")) m.push("deja_expire");
+      else if (mine.some((o) => o.statut === "acceptee")) m.push("deja_pris");
+      const charge = M.chargeLivreur(l.id, cmds, cmd.id);
+      if (charge >= M.seuil(plan, "missions_max")) m.push("occupe");
+      if (m.length) { elimines.push({ livreur: l, motifs: m }); return; }
+      const pos = l.dossier && l.dossier.position, dist = pos && cmd.de && cmd.de.la != null ? M.distanceKm(pos, cmd.de) : null;
+      const prox = dist == null ? M.seuil(plan, "proximite_inconnue") : Math.max(0, 1 - dist / M.seuil(plan, "distance_ref_km"));
+      const fiab = M.statsLivreur(l.id, cmds, plan).fiabilite, cs = Math.max(0, 1 - charge / Math.max(1, M.seuil(plan, "missions_max")));
+      retenus.push({ livreur: l, score: Math.round((sw * prox + fw * fiab + cw * cs) / tot * 1000) / 10, distance_km: dist == null ? null : Math.round(dist * 10) / 10, fiabilite: fiab, charge });
+    });
+    retenus.sort((a, b) => b.score - a.score || (a.distance_km == null ? 1e9 : a.distance_km) - (b.distance_km == null ? 1e9 : b.distance_km) || (a.livreur.id < b.livreur.id ? -1 : 1));
+    return { retenus, elimines };
+  };
+  M.prochainCandidat = (candidats, cmd, ctx) => M.classer(candidats, cmd, ctx).retenus[0] || null;
+  const clore = (cmd, statut, motif, now) => {
+    const o = (cmd.offres || []).slice().reverse().find((x) => x.statut === "proposee" && cmd.offre_courante && x.livreur === cmd.offre_courante.livreur);
+    if (o) { o.statut = statut; o.motif = motif; o.repondu_a = now; }
+    cmd.offre_courante = null;
+  };
+  /** Un pas du répartiteur pour UNE commande (idempotent : sans changement d'état, il ne modifie rien). Une seule offre à la fois ;
+      refus ou expiration → candidat suivant ; plus personne → sans_candidat. Retourne { changed, action, livreur? }. */
+  M.repartir = (cmd, livreurs, ctx) => {
+    ctx = ctx || {}; const plan = ctx.plan, now = ctx.now || Date.now(); let changed = false, action = "aucune";
+    if (cmd.statut !== "ready_for_assignment") {
+      if (cmd.offre_courante) { clore(cmd, "expiree", "Commande plus disponible", now); changed = true; action = "close"; }
+      if (cmd.sans_candidat) { cmd.sans_candidat = false; changed = true; }
+      return { changed, action };
+    }
+    if (cmd.offre_courante) {
+      const l = (livreurs || []).find((x) => x.id === cmd.offre_courante.livreur);
+      if (now - cmd.offre_courante.at >= M.seuil(plan, "delai_offre_s") * 1000) { clore(cmd, "expiree", "Délai de réponse dépassé", now); changed = true; action = "expiree"; }
+      else if (!l || l.statut !== "valide" || !M.enLigne(l, now, plan)) { clore(cmd, "expiree", "Livreur indisponible", now); changed = true; action = "expiree"; }
+      else return { changed: false, action: "attente" };
+    }
+    const c = M.prochainCandidat(livreurs, cmd, ctx);
+    if (c) {
+      (cmd.offres = cmd.offres || []).push({ livreur: c.livreur.id, nom: c.livreur.nom, at: now, statut: "proposee" });
+      cmd.offre_courante = { livreur: c.livreur.id, at: now }; cmd.sans_candidat = false;
+      return { changed: true, action: "proposee", livreur: c.livreur.id, score: c.score };
+    }
+    if (cmd.sans_candidat !== true) { cmd.sans_candidat = true; changed = true; }
+    return { changed, action: action === "expiree" ? "sans_candidat" : "aucune", sans_candidat: true };
+  };
+  /** Réponse d'un livreur à l'offre qui lui est adressée : acceptée ou refusée (motif). Refuse si l'offre n'est plus la sienne ou a expiré. */
+  M.repondreOffre = (cmd, livreurId, reponse, motif, ctx) => {
+    ctx = ctx || {}; const now = ctx.now || Date.now(), oc = cmd.offre_courante;
+    if (cmd.statut !== "ready_for_assignment" || !oc || oc.livreur !== livreurId) throw err("OFFRE_INDISPONIBLE", "Cette demande n'est plus disponible");
+    if (now - oc.at >= M.seuil(ctx.plan, "delai_offre_s") * 1000) { clore(cmd, "expiree", "Délai de réponse dépassé", now); throw err("OFFRE_EXPIREE", "Le délai de réponse est dépassé"); }
+    if (reponse !== "acceptee" && reponse !== "refusee") throw err("REPONSE_INVALIDE", "Réponse inconnue");
+    clore(cmd, reponse, reponse === "refusee" ? (motif || "Sans motif") : "", now);
+    return cmd;
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = M; else root.M = M;

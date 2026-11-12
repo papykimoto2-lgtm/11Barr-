@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0d1b2a">
+<meta name="description" content="11Barré : commandez une course, une moto ou une livraison en Côte d'Ivoire. Prix et délai affichés avant de commander (maquette de démonstration).">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -11,16 +12,17 @@
 <title>11Barré — Courses et livraison</title>
 <link rel="stylesheet" href="commun.css">
 </head>
-<body>
-<div id="app" aria-live="polite"></div>
+<body class="client">
+<div id="app"></div>
+<div id="sr" class="sr" role="status" aria-live="polite" aria-atomic="true"></div>
+<noscript><p style="padding:20px">11Barré a besoin de JavaScript pour fonctionner.</p></noscript>
 <script src="commun.js"></script>
 <script src="moteur.js"></script>
 <script>
 "use strict";
 /* 11Barré — maquette interactive du parcours client (courses et livraison).
    Données de démonstration : aucun serveur, aucun paiement réel, chauffeurs et livreurs fictifs, positions approximatives.
-   Seuls l'historique, les adresses récentes et le mode de paiement choisi sont gardés sur l'appareil. */
-/* Services et grille de prix (démonstration : à remplacer par la grille réelle) */
+   Gardés sur l'appareil : historique avec reçus, adresses récentes, mode de paiement, dernier lieu, course en cours (reprise après rechargement). */
 const SERV={
  courses:{nom:"Courses",v:30,items:[{id:"eco",nom:"Éco",pl:4,note:"Véhicules climatisés",k:"car"},{id:"confort",nom:"Confort",pl:4,note:"Climatisés, 2007 ou plus récent",k:"car"},{id:"plus",nom:"Confort+",ind:true,k:"car"},{id:"fam",nom:"Famille",pl:6,note:"Monospace, 6 places",k:"van"}]},
  moto:{nom:"Moto-taxi",v:34,items:[{id:"mt",nom:"Moto-taxi",pl:1,note:"Un passager, casque fourni",k:"moto"}]},
@@ -32,10 +34,17 @@ const DRV=[["Koffi A.","Toyota Yaris","1234 GH 01",4.9],["Awa T.","Hyundai Accen
 const ICON={car:'<svg viewBox="0 0 64 40"><path d="M6 28v-6l6-10c1-2 3-3 5-3h22c2 0 4 1 5 3l7 10v6z" fill="#dfe6ee"/><path d="M13 22l5-8h12v8zM33 14h8l5 8H33z" fill="#6b8299"/><circle cx="17" cy="29" r="5" fill="#0d1b2a"/><circle cx="48" cy="29" r="5" fill="#0d1b2a"/></svg>',van:'<svg viewBox="0 0 64 40"><path d="M4 28V10c0-2 1-3 3-3h30c2 0 3 1 4 3l6 8c1 1 1 2 1 3v7z" fill="#dfe6ee"/><path d="M37 11h4l5 8H37z" fill="#6b8299"/><circle cx="17" cy="29" r="5" fill="#0d1b2a"/><circle cx="46" cy="29" r="5" fill="#0d1b2a"/></svg>',moto:'<svg viewBox="0 0 64 40"><circle cx="14" cy="29" r="7" fill="#0d1b2a"/><circle cx="50" cy="29" r="7" fill="#0d1b2a"/><path d="M14 29l10-12h14l12 12M24 17l-3-6h-5M38 17l-3-8h-6" stroke="#ffc21a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="12" width="12" height="10" rx="2" fill="#c98a00"/></svg>',truck:'<svg viewBox="0 0 64 40"><rect x="3" y="7" width="34" height="21" rx="2" fill="#dfe6ee"/><path d="M37 13h12l8 8v7H37z" fill="#ffc21a"/><circle cx="15" cy="30" r="5" fill="#0d1b2a"/><circle cx="46" cy="30" r="5" fill="#0d1b2a"/></svg>'};
 const SVG={pin:'<svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.500a2.500 2.500 0 0 1 0 5z" fill="currentColor"/></svg>',flag:'<svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 3v18M5 4h13l-3 4 3 4H5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',menu:'<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',back:'<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7M8 12h13" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',search:'<svg viewBox="0 0 24 24" width="24" height="24"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2.4" fill="none"/><path d="M16 16l5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',opts:'<svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 8h10M18 8h2M4 16h2M10 16h10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="16" cy="8" r="2.500" stroke="currentColor" stroke-width="2.200" fill="none"/><circle cx="8" cy="16" r="2.500" stroke="currentColor" stroke-width="2.200" fill="none"/></svg>',cash:'<svg viewBox="0 0 24 24" width="28" height="28"><rect x="2" y="6" width="20" height="12" rx="2" fill="#2fa84f"/><circle cx="12" cy="12" r="3" fill="#b9f0c4"/></svg>'};
 const tileIco={courses:ICON.car,moto:ICON.moto,livraison:'<svg viewBox="0 0 64 64"><rect x="8" y="22" width="30" height="28" rx="3" fill="#c98a00"/><path d="M23 26v14M17 33l6-7 6 7" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="46" cy="46" r="8" fill="#0d1b2a"/><path d="M40 40l8-10h8" stroke="#ffc21a" stroke-width="4" fill="none" stroke-linecap="round"/></svg>',cargo:ICON.truck};
+/* Icônes décoratives : masquées pour les lecteurs d'écran */
+const hid=s=>s.includes("aria-hidden")?s:s.replace("<svg ",'<svg aria-hidden="true" focusable="false" ');
+[SVG,ICON,tileIco].forEach(o=>Object.keys(o).forEach(k=>{o[k]=hid(o[k])}));
+SVG.loc=hid('<svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>');
 /* État */
-const S={ph:"home",tab:"courses",from:lieu("Ma position (démo)"),to:null,cat:null,pay:LS.get("pay","cash"),pick:null,sheet:null,q:"",
- o:{vit:"std",porte:false,instr:"",autreN:"",autreT:"",msg:false,dN:"",dT:"",colis:"",payeur:"exp",cod:""},run:null,star:0,hist:LS.get("hist",[]),rec:LS.get("rec",["Plateau","Cocody Deux-Plateaux","Marcory Zone 4"])};
-/* Calculs */
+const AUJ=()=>new Date().toLocaleDateString("fr-FR"),ATTENTE_REELLE=20000;
+const drvOnline=()=>(Date.now()-LS.get("chauffeur_ligne",0))<10000;
+const O0=()=>({vit:"std",porte:false,instr:"",autreN:"",autreT:"",msg:false,dN:"",dT:"",colis:"",payeur:"exp",cod:""});
+const S={ph:"home",tab:"courses",from:lieu(LS.get("pos",null))||lieu("Ma position (démo)"),gps:!!lieu(LS.get("pos",null)),to:null,cat:null,pay:LS.get("pay","cash"),pick:null,sheet:null,q:"",
+  o:O0(),run:null,star:0,tip:0,tags:[],hist:LS.get("hist",[]),rec:LS.get("rec",["Plateau","Cocody Deux-Plateaux","Marcory Zone 4"]),
+  wel:LS.get("accueil_vu",false)?-1:0,confirm:null,recu:null,prev:null,err:"",busy:false,loc:"",opener:null};
 const dist=()=>S.from&&S.to?Math.max(.8,km(S.from,S.to)*1.35):0;
 const vit=()=>VIT.find(v=>v.id===S.o.vit);
 const catsDe=t=>SERV[t].items,catCur=()=>SERV[S.tab].items.find(c=>c.id===S.cat);
@@ -55,98 +64,188 @@ function carte(){const el=$("#map");if(!el)return;W=el.clientWidth||360;H=el.cli
  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Itinéraire de ${esc(a.n)} à ${esc(b.n)}">${fond()}<path d="${route}" stroke="#fff" stroke-width="11" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="${route}" pathLength="100" stroke="var(--route)" stroke-width="6" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="${route}" pathLength="100" stroke="#f5a300" stroke-width="6" fill="none" stroke-dasharray="0 52 16 40"/><circle cx="${A[0]}" cy="${A[1]}" r="9" fill="#fff" stroke="#0d1b2a" stroke-width="4"/><circle cx="${B[0]}" cy="${B[1]}" r="9" fill="#fff" stroke="#ff5a36" stroke-width="4"/>${bubble}${car}</svg>`}
 /* Rendu */
 const bar=(l,rt)=>`<div class="top"><div>${l}</div>${rt||""}</div>`;
-const home=()=>`${bar(`<span class="logo"><i>11</i>Barré</span><div class="pos">Votre position <small>${esc(S.from.z)}</small></div>`,`<button class="ib" data-a="menu" aria-label="Menu">${SVG.menu}</button>`)}
-<div class="home"><div class="tiles">${Object.entries(SERV).map(([k,s],i)=>`<button class="tile ${i===0?"big":""}" data-a="svc" data-v="${k}">${tileIco[k]}<b>${s.nom}</b><span>${k==="courses"?"à partir de 3 min":k==="livraison"?"colis à partir de 400 F":k==="moto"?"rapide, dans les embouteillages":"camionnette et camion"}</span></button>`).join("")}
-<button class="tile" disabled><b>Food</b><span>bientôt</span></button><button class="tile" disabled><b>Interurbain</b><span>bientôt</span></button></div>
+const WEL=[["Bienvenue sur 11Barré","Commandez une course en voiture ou à moto. Le prix et le délai s'affichent avant de confirmer : pas de surprise."],["Envoyez un colis","Faites livrer un colis à moto ou en camionnette. Avec le paiement à la livraison, le livreur encaisse l'argent pour vous."],["Payez comme vous voulez","Espèces, Orange Money, Wave ou MTN MoMo. C'est une démonstration : aucun paiement réel et des chauffeurs fictifs. Si aucun chauffeur n'est en ligne, une course de démonstration prend le relais (au bout de 20 secondes si un chauffeur a été prévenu)."]];
+const wel=()=>{const i=S.wel,w=WEL[i];return`<section class="wel" aria-label="Bienvenue"><div class="nt">Étape ${i+1} sur ${WEL.length}</div><h2>${w[0]}</h2><p>${w[1]}</p><div class="dots" aria-hidden="true">${WEL.map((x,j)=>`<i class="${j===i?"on":""}"></i>`).join("")}</div><div class="cta"><button class="btn sec2" data-a="welSkip">Passer</button><button class="btn" data-a="welNext">${i===WEL.length-1?"Commencer":"Suivant"}</button></div></section>`};
+const posLib=()=>S.gps?"Près de "+S.from.n:S.from.z+" · position de démonstration";
+const locBtn=()=>`<button class="loc" data-a="loc" ${S.loc==="wait"?'disabled aria-busy="true"':""}>${S.loc==="wait"?'<span class="spin" aria-hidden="true"></span> Localisation…':SVG.loc+" Ma position"}</button>`;
+const home=()=>`${bar(`<span class="logo"><i>11</i>Barré</span><div class="pos">Votre position <small>${esc(posLib())}</small></div>`,`<button class="ib" data-a="menu" aria-label="Menu" aria-haspopup="dialog">${SVG.menu}</button>`)}
+<div class="home">${navigator.onLine===false?'<p class="banner" role="status">Vous êtes hors connexion : les écrans restent disponibles, mais rien n\'est envoyé.</p>':""}${S.wel>=0?wel():""}<div>${locBtn()}</div><div class="tiles">${Object.entries(SERV).map(([k,s],i)=>`<button class="tile ${i===0?"big":""}" data-a="svc" data-v="${k}">${tileIco[k]}<b>${s.nom}</b><span>${k==="courses"?"à partir de 3 min":k==="livraison"?"colis à partir de 400 F":k==="moto"?"rapide, dans les embouteillages":"camionnette et camion"}</span></button>`).join("")}
+<button class="tile" disabled aria-disabled="true"><b>Food</b><span>bientôt</span></button><button class="tile" disabled aria-disabled="true"><b>Interurbain</b><span>bientôt</span></button></div>
 <button class="search" data-a="dest">${SVG.search}<span style="flex:1">Où allez-vous ?</span></button>
-<div class="sec">Adresses récentes</div>${S.rec.map(n=>lieu(n)).filter(Boolean).map(l=>`<button class="row" data-a="rec" data-n="${esc(l.n)}"><span class="pin">${SVG.pin}</span><span class="t"><b>${esc(l.n)}</b><span>${esc(l.z)}</span></span><span class="m">${Math.max(4,Math.round(km(S.from,l)*1.35/30*60)+3)} min</span></button>`).join("")}
+<div class="sec" role="heading" aria-level="2">Adresses récentes</div>${S.rec.map(n=>lieu(n)).filter(Boolean).length?S.rec.map(n=>lieu(n)).filter(Boolean).map(l=>`<button class="row" data-a="rec" data-n="${esc(l.n)}"><span class="pin">${SVG.pin}</span><span class="t"><b>${esc(l.n)}</b><span>${esc(l.z)}</span></span><span class="m">${Math.max(4,Math.round(km(S.from,l)*1.35/30*60)+3)} min</span></button>`).join(""):'<p class="nt" style="padding:10px 2px">Vos dernières destinations apparaîtront ici.</p>'}
 <p class="nt" style="margin-top:20px">Maquette de démonstration : chauffeurs, prix et paiements sont fictifs.</p></div>`;
-const cartes=()=>SERV[S.tab].items.map(c=>`<button class="cat ${S.cat===c.id?"on":""}" data-a="cat" data-c="${c.id}" ${c.ind?"disabled":""}>${ICON[c.k]}<small>${c.ind?"—":approche(c)+" min"}</small><b>${c.nom}</b><span class="p">${c.ind?"—":F(prixBase(c))}</span></button>`).join("");
+const cartes=()=>SERV[S.tab].items.map(c=>`<button class="cat ${S.cat===c.id?"on":""}" data-a="cat" data-c="${c.id}" aria-pressed="${S.cat===c.id}" ${c.ind?"disabled":""} aria-label="${esc(c.nom)}${c.ind?", indisponible":", "+approche(c)+" minutes, "+F(prixBase(c))}">${ICON[c.k]}<small>${c.ind?"—":approche(c)+" min"}</small><b>${c.nom}</b><span class="p">${c.ind?"—":F(prixBase(c))}</span></button>`).join("");
 const payLib=()=>(PAIE.find(p=>p[0]===S.pay)||PAIE[0])[1];
-const trip=()=>{const c=catCur();return`<button class="ib back" data-a="home" aria-label="Retour">${SVG.back}</button><div class="col"><div id="map"></div>
-<div class="sheet"><div class="scroll"><button class="od" data-a="pf"><span class="ic">${SVG.pin}</span><span><small>${SERV[S.tab].liv?"Récupération":"Prise en charge"}</small><b>${esc(S.from.n)}</b></span></button>
+const dispoTxt=()=>drvOnline()?"Un chauffeur est en ligne : votre commande lui sera envoyée. S'il ne répond pas sous 20 secondes, une course de démonstration prendra le relais.":"Aucun chauffeur n'est en ligne pour le moment. Vous pouvez commander : une course de démonstration, avec un chauffeur fictif, démarrera aussitôt.";
+const trip=()=>{const c=catCur();return`<button class="ib back" data-a="home" aria-label="Retour à l'accueil">${SVG.back}</button><div class="col"><div id="map"></div>
+<div class="sheet"><div class="scroll"><button class="od" data-a="pf"><span class="ic">${SVG.pin}</span><span><small>${SERV[S.tab].liv?"Récupération":"Prise en charge"} · modifier</small><b>${esc(S.from.n)}</b></span></button>
 <button class="od" data-a="pt"><span class="ic">${SVG.flag}</span><span><small>${S.to?"≈ "+duree()+" min · "+dist().toFixed(1)+" km":"Destination"}</small><b>${S.to?esc(S.to.n):"Où allez-vous ?"}</b></span></button>
-<div class="tabs" role="tablist">${Object.entries(SERV).map(([k,s])=>`<button class="tab ${S.tab===k?"on":""}" role="tab" aria-selected="${S.tab===k}" data-a="tab" data-v="${k}">${s.nom}</button>`).join("")}</div>
+<div class="tabs" role="tablist" aria-label="Type de service">${Object.entries(SERV).map(([k,s])=>`<button class="tab ${S.tab===k?"on":""}" role="tab" aria-selected="${S.tab===k}" data-a="tab" data-v="${k}">${s.nom}</button>`).join("")}</div>
 ${S.to?`<div class="cats">${cartes()}</div>`:`<p class="nt" style="padding:10px 2px">Choisissez une destination pour voir les prix et les délais.</p>`}</div>
-<button class="pay" data-a="paie">${S.pay==="cash"?SVG.cash:'<span class="chip">'+esc(payLib())+"</span>"}<span style="flex:1">${S.pay==="cash"?"Espèces":"Payer avec "+esc(payLib())}</span><span>›</span></button>
-<div class="cta"><button class="btn" data-a="cmd" ${S.to&&c?"":"disabled"}>${c?"Commander · "+F(total(c)):"Commander"}</button><button class="mini" data-a="det" aria-label="Options de la commande" ${c?"":"disabled"}>${SVG.opts}</button></div></div></div>`};
-const picker=()=>`<div class="full" role="dialog" aria-label="Choisir une adresse"><header><button class="ib" data-a="pclose" aria-label="Fermer">${SVG.back}</button><input type="search" id="pq" placeholder="${S.pick==="from"?"D'où partez-vous ?":"Où allez-vous ?"}" autocomplete="off" aria-label="Adresse"></header><div id="pl" style="overflow:auto;padding:0 16px 20px"></div></div>`;
-const plist=()=>{const q=S.q.trim().toLowerCase(),L=LIEUX.filter(l=>!q||(l.n+" "+l.z).toLowerCase().includes(q));$("#pl").innerHTML=L.length?L.map(l=>`<button class="row" data-a="pset" data-n="${esc(l.n)}"><span class="pin">${SVG.pin}</span><span class="t"><b>${esc(l.n)}</b><span>${esc(l.z)}</span></span></button>`).join(""):'<p class="nt" style="padding:16px 4px">Aucune adresse trouvée. Dans la version réelle, la recherche couvrira toute la ville.</p>'};
-const ov=h=>`<div class="ov" data-a="oclose"><div class="sheet" role="dialog" data-stop="1"><div class="scroll">${h}</div></div></div>`;
-const shPay=()=>ov(`<h2 style="margin:4px 0 8px">Modes de paiement</h2>${PAIE.map(p=>`<button class="opt ${S.pay===p[0]?"on":""}" data-a="pay" data-p="${p[0]}" ${p[3]?"disabled":""}><span class="dot"></span><span class="t"><b>${p[1]}</b><small>${p[2]}</small></span></button>`).join("")}<p class="nt">Démo : aucun débit n'est effectué. Le paiement mobile réel demandera un accord avec l'opérateur.</p><div class="cta"><button class="btn" data-a="oclose2">Terminer</button></div>`);
-const shDet=()=>{const c=catCur(),l=SERV[S.tab].liv;return ov(`<h2 style="margin:4px 0 0">${esc(c.nom)}</h2><p class="nt" style="margin:0">${esc(c.note||"")}${c.pl?" · "+c.pl+" place"+(c.pl>1?"s":""):""}</p>
-${l?`<div class="sec">Destinataire et colis</div><label class="l">Nom du destinataire<input class="fld" data-k="dN" value="${esc(S.o.dN)}" maxlength="60" autocomplete="off"></label><label class="l">Téléphone du destinataire<input class="fld" data-k="dT" inputmode="tel" value="${esc(S.o.dT)}" maxlength="20" autocomplete="off"></label><label class="l">Contenu du colis<input class="fld" data-k="colis" value="${esc(S.o.colis)}" maxlength="100" placeholder="Ex. documents, vêtements…"></label>${c.cod?`<label class="l">Montant à encaisser (F)<input class="fld" data-k="cod" inputmode="numeric" value="${esc(S.o.cod)}" maxlength="9"></label>`:""}
-<div class="sec">Qui paie la livraison ?</div>${[["exp","L'expéditeur (moi)"],["dest","Le destinataire, à la réception"]].map(x=>`<button class="opt ${S.o.payeur===x[0]?"on":""}" data-a="payeur" data-p="${x[0]}"><span class="dot"></span><span class="t"><b>${x[1]}</b></span></button>`).join("")}
-<div class="sec">Vitesse</div>${VIT.map(v=>`<button class="opt ${S.o.vit===v.id?"on":""}" data-a="vit" data-p="${v.id}"><span class="dot"></span><span class="t"><b>${v.n}</b><small>${esc(v.d)}${v.id==="diff"?hh(120):""}</small></span><span class="pr">${F(M.devis(PLAN,{cat:c.id,km:dist(),vitesse:v.id}).total)}</span></button>`).join("")}
+${S.to&&c?`<p class="dispo" id="dispo">${dispoTxt()}</p>`:""}
+<button class="pay" data-a="paie" aria-label="Mode de paiement : ${esc(payLib())}. Modifier">${S.pay==="cash"?SVG.cash:'<span class="chip">'+esc(payLib())+"</span>"}<span style="flex:1">${S.pay==="cash"?"Espèces":"Payer avec "+esc(payLib())}</span><span aria-hidden="true">›</span></button>
+<div class="cta"><button class="btn" data-a="cmd" ${S.to&&c&&!S.busy?"":"disabled"} ${S.busy?'aria-busy="true"':""}>${S.busy?'<span class="spin" aria-hidden="true"></span> Envoi de la commande…':c?"Commander · "+F(total(c)):"Commander"}</button><button class="mini" data-a="det" aria-label="Options de la commande" ${c?"":"disabled"}>${SVG.opts}</button></div></div></div>`};
+const picker=()=>`<div class="full" role="dialog" aria-modal="true" aria-label="Choisir une adresse" tabindex="-1"><header><button class="ib" data-a="pclose" aria-label="Fermer la recherche d'adresse">${SVG.back}</button><input type="search" id="pq" placeholder="${S.pick==="from"?"D'où partez-vous ?":"Où allez-vous ?"}" autocomplete="off" aria-label="${S.pick==="from"?"Adresse de départ":"Adresse d'arrivée"}" value="${esc(S.q)}"></header><div style="padding:0 16px">${S.pick==="from"?locBtn():""}</div><div id="pl" style="overflow:auto;padding:0 16px 20px"></div></div>`;
+const plist=()=>{const q=S.q.trim().toLowerCase(),L=LIEUX.filter(l=>(S.pick==="from"||l.n!=="Ma position (démo)")&&(!q||(l.n+" "+l.z).toLowerCase().includes(q)));$("#pl").innerHTML=L.length?L.map(l=>`<button class="row" data-a="pset" data-n="${esc(l.n)}"><span class="pin">${SVG.pin}</span><span class="t"><b>${esc(l.n)}</b><span>${esc(l.z)}</span></span></button>`).join(""):`<p class="nt" style="padding:16px 4px">Aucune adresse trouvée pour « ${esc(S.q.trim())} ». Essayez un quartier (par exemple Cocody ou Yopougon). Dans la version réelle, la recherche couvrira toute la ville.</p><button class="btn sec2" data-a="pvoir" style="width:100%">Voir tous les lieux</button>`};
+const ov=(h,lab,id)=>`<div class="ov" data-a="oclose"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(lab)}" tabindex="-1" data-stop="1"><div class="scroll">${h}</div></div></div>`;
+const radio=(on,a,k,v,t,sub,pr)=>`<button class="opt ${on?"on":""}" role="radio" aria-checked="${on}" data-a="${a}" data-${k}="${v}"><span class="dot"></span><span class="t"><b>${t}</b>${sub?`<small>${sub}</small>`:""}</span>${pr?`<span class="pr">${pr}</span>`:""}</button>`;
+const shPay=()=>ov(`<h2 style="margin:4px 0 8px">Modes de paiement</h2><div role="radiogroup" aria-label="Mode de paiement">${PAIE.map(p=>p[3]?`<button class="opt" disabled role="radio" aria-checked="false"><span class="dot"></span><span class="t"><b>${p[1]}</b><small>${p[2]}</small></span></button>`:radio(S.pay===p[0],"pay","p",p[0],p[1],p[2])).join("")}</div><p class="nt">Démo : aucun débit n'est effectué. Le paiement mobile réel demandera un accord avec l'opérateur.</p><div class="cta"><button class="btn" data-a="oclose2">Terminer</button></div>`,"Modes de paiement");
+const shDet=()=>{const c=catCur(),l=SERV[S.tab].liv;return ov(`<h2 style="margin:4px 0 0">${esc(c.nom)}</h2><p class="nt" style="margin:0">${esc(c.note||"")}${c.pl?" · "+c.pl+" place"+(c.pl>1?"s":""):""}</p>${S.err?`<p class="errm" role="alert">${esc(S.err)}</p>`:""}
+${l?`<div class="sec">Destinataire et colis</div><label class="l">Nom du destinataire<input class="fld" data-k="dN" value="${esc(S.o.dN)}" maxlength="60" autocomplete="off" ${S.err&&S.o.dN.trim().length<2?'aria-invalid="true"':""}></label><label class="l">Téléphone du destinataire<input class="fld" data-k="dT" inputmode="tel" value="${esc(S.o.dT)}" maxlength="20" autocomplete="off" placeholder="Ex. 07 00 00 00 00" ${S.err&&S.o.dT.replace(/\D/g,"").length<8?'aria-invalid="true"':""}></label><label class="l">Contenu du colis<input class="fld" data-k="colis" value="${esc(S.o.colis)}" maxlength="100" placeholder="Ex. documents, vêtements…"></label>${c.cod?`<label class="l">Montant à encaisser (F)<input class="fld" data-k="cod" inputmode="numeric" value="${esc(S.o.cod)}" maxlength="9" ${S.err&&!(+S.o.cod>0)?'aria-invalid="true"':""}></label><p class="nt">Le livreur encaisse cette somme auprès du destinataire et vous la reverse.</p>`:""}
+<div class="sec">Qui paie la livraison ?</div><div role="radiogroup" aria-label="Qui paie la livraison">${[["exp","L'expéditeur (moi)"],["dest","Le destinataire, à la réception"]].map(x=>radio(S.o.payeur===x[0],"payeur","p",x[0],x[1])).join("")}</div>
+<div class="sec">Vitesse</div><div role="radiogroup" aria-label="Vitesse de livraison">${VIT.map(v=>radio(S.o.vit===v.id,"vit","p",v.id,v.n,esc(v.d)+(v.id==="diff"?hh(120):""),F(M.devis(PLAN,{cat:c.id,km:dist(),vitesse:v.id}).total))).join("")}</div>
 <div class="tg"><span><b>Porte à porte</b><br><span class="nt">Livré jusqu'à la porte · +${PLAN.options.porte_a_porte} F</span></span><label class="sw"><input type="checkbox" data-k="porte" ${S.o.porte?"checked":""} aria-label="Porte à porte"><i></i></label></div>`
 :`<div class="sec">Options</div><label class="l">Instructions pour le chauffeur<input class="fld" data-k="instr" value="${esc(S.o.instr)}" maxlength="120" placeholder="Ex. portail bleu, appelez en arrivant"></label>
 <label class="l">Commander pour quelqu'un d'autre<input class="fld" data-k="autreN" value="${esc(S.o.autreN)}" maxlength="60" placeholder="Nom du passager"></label><input class="fld" style="margin-top:8px" data-k="autreT" inputmode="tel" value="${esc(S.o.autreT)}" maxlength="20" placeholder="Téléphone du passager" aria-label="Téléphone du passager">
 <div class="tg"><span><b>Je ne peux communiquer que par message</b><br><span class="nt">Le chauffeur ne vous appellera pas</span></span><label class="sw"><input type="checkbox" data-k="msg" ${S.o.msg?"checked":""} aria-label="Communiquer uniquement par message"><i></i></label></div>`}
-<div class="sec">Détail du prix</div>${devisC(c).lignes.map(l=>`<div class="hl" style="display:flex;justify-content:space-between;padding:6px 0"><span>${esc(l.libelle)}</span><b>${l.montant<0?"− ":""}${F(Math.abs(l.montant))}</b></div>`).join("")}<div class="hl" style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--line)"><b>Total</b><b>${F(total(c))}</b></div><p class="nt">Prix valable ${PLAN.validite_devis_min} min${PLAN.demonstration?" · grille de démonstration":""}.</p>
-<div class="cta" style="margin-top:12px"><button class="btn" data-a="oclose2">Enregistrer · ${F(total(c))}</button></div>`)};
-const shMenu=()=>ov(`<h2 style="margin:4px 0 8px">Menu</h2><button class="opt" data-a="hist"><span class="t"><b>Courses et adresses</b><small>${S.hist.length} course(s) enregistrée(s)</small></span>›</button><button class="opt" data-a="paie"><span class="t"><b>Modes de paiement</b><small>${esc(payLib())}</small></span>›</button><button class="opt" data-a="devenir"><span class="t"><b>Espace chauffeur et livreur</b><small>Recevoir et réaliser des courses</small></span>›</button><p class="nt">11Barré · maquette de démonstration</p>`);
-const shHist=()=>ov(`<h2 style="margin:4px 0 8px">Courses et adresses</h2>${S.hist.length?S.hist.map(h=>`<div class="opt" style="cursor:default"><span class="t"><b>${esc(h.de)} → ${esc(h.a)}</b><small>${esc(h.s)} · ${esc(h.d)}${h.n?" · "+"★".repeat(h.n):""}</small></span><span class="pr">${F(h.p)}</span></div>`).join(""):'<p class="nt">Aucune course pour le moment.</p>'}<div class="cta"><button class="btn sec2" data-a="oclose2">Fermer</button></div>`);
-const shSos=()=>ov(`<h2 style="margin:4px 0 8px">Besoin d'aide ?</h2><p>Votre position et les informations du trajet seront envoyées au support 11Barré (démonstration).</p><a class="btn er" style="text-decoration:none;text-align:center;display:block" href="tel:185">Appeler le SAMU (185)</a><div class="cta" style="margin-top:8px"><a class="btn sec2" style="text-decoration:none;text-align:center" href="tel:110">Police (110)</a><a class="btn sec2" style="text-decoration:none;text-align:center" href="tel:180">Pompiers (180)</a></div><p class="nt">Numéros d'urgence à vérifier avant mise en service.</p><div class="cta"><button class="btn sec2" data-a="oclose2">Fermer</button></div>`);
-const live=()=>{const r=S.run,c=r.cat,liv=SERV[r.tab].liv,d=r.drv,lbl=liv?"livreur":"chauffeur";
- const head={search:`<span class="pulse"></span> Recherche d'un ${lbl}…`,approach:`${d[0]} arrive dans ${r.etaLeft} min`,arrived:`${d[0]} est arrivé`,ride:liv?"Colis en route":"Course en cours",end:"Terminé"}[r.step];
- const det=r.step==="search"?`<p class="nt">Nous contactons les ${liv?"livreurs":"chauffeurs"} proches de ${esc(S.from.n)}.</p><div class="cta"><button class="btn sec2" data-a="annul">Annuler</button></div>`
- :`<div class="drv"><div class="av">${esc(d[0][0])}</div><div style="flex:1"><b>${esc(d[0])}</b> · ★ ${d[3].toFixed(1)}<br><span class="nt">${esc(c.k==="moto"?"Moto":d[1])}</span> <span class="plate">${esc(d[2])}</span></div></div>
- ${r.step==="approach"||r.step==="arrived"?`<div class="eb">Code de confirmation à donner : <span class="code">${r.code}</span></div>`:""}
- <div class="cta"><a class="mini" href="tel:+2250000000000" aria-label="Appeler" style="text-decoration:none;color:inherit">📞</a><button class="mini" data-a="share" aria-label="Partager le trajet">🔗</button><button class="btn sec2" data-a="annul" ${r.step==="ride"?"disabled":""}>Annuler</button></div>`;
- return`<div class="col"><div id="map"></div><span class="demo">Démo</span><button class="sos" data-a="sos" aria-label="SOS">SOS</button><div class="sheet"><h2 style="margin:0 0 6px;font-size:20px">${head}</h2><div class="scroll">${det}</div></div></div>`};
-const rate=()=>`<div class="ov"><div class="sheet" role="dialog"><h2 style="margin:4px 0;text-align:center">Merci ! Comment était votre ${SERV[S.run.tab].liv?"livraison":"course"} ?</h2><p class="nt" style="text-align:center">${esc(S.run.drv[0])} · ${F(S.run.prix)} · ${S.pay==="cash"?"à payer en espèces":"payé avec "+esc(payLib())}</p><div class="stars">${[1,2,3,4,5].map(i=>`<button class="${S.star>=i?"on":""}" data-a="star" data-n="${i}" aria-label="${i} étoile${i>1?"s":""}">★</button>`).join("")}</div><div class="cta"><button class="btn" data-a="fin">Terminer</button></div></div></div>`;
-function render(){const a=$("#app");let h="";
- if(S.ph==="home")h=home();else if(S.ph==="trip")h=trip();else if(S.ph==="live")h=live();
- if(S.pick)h+=picker();
- if(S.sheet==="pay")h+=shPay();else if(S.sheet==="det")h+=shDet();else if(S.sheet==="menu")h+=shMenu();else if(S.sheet==="hist")h+=shHist();else if(S.sheet==="sos")h+=shSos();
- if(S.ph==="live"&&S.run&&S.run.step==="end")h+=rate();
- a.innerHTML=h;carte();if(S.pick){plist();const q=$("#pq");if(q)q.focus()}}
-const toast=m=>{document.querySelectorAll("#toast").forEach(x=>x.remove());const t=document.createElement("div");t.id="toast";t.textContent=m;$("#app").appendChild(t);setTimeout(()=>t.remove(),2600)};
+<div class="sec">Détail du prix</div>${devisC(c).lignes.map(x=>`<div class="hl"><span>${esc(x.libelle)}</span><b>${x.montant<0?"− ":""}${F(Math.abs(x.montant))}</b></div>`).join("")}<div class="hl" style="border-top:1px solid var(--line)"><b>Total</b><b>${F(total(c))}</b></div><p class="nt">Prix valable ${PLAN.validite_devis_min} min${PLAN.demonstration?" · grille de démonstration":""}.</p>
+<div class="cta" style="margin-top:12px"><button class="btn" data-a="oclose2">Enregistrer · ${F(total(c))}</button></div>`,"Options de la commande")};
+const lien=(h,t,s)=>`<a class="opt" href="${h}"><span class="t"><b>${t}</b><small>${s}</small></span><span aria-hidden="true">›</span></a>`;
+const shMenu=()=>ov(`<h2 style="margin:4px 0 8px">Menu</h2><button class="opt" data-a="hist"><span class="t"><b>Courses et reçus</b><small>${S.hist.length?S.hist.length+" course(s) enregistrée(s)":"Aucune course pour le moment"}</small></span><span aria-hidden="true">›</span></button><button class="opt" data-a="paie"><span class="t"><b>Modes de paiement</b><small>${esc(payLib())}</small></span><span aria-hidden="true">›</span></button><button class="opt" data-a="welAgain"><span class="t"><b>Revoir la présentation</b><small>Comment fonctionne l'application</small></span><span aria-hidden="true">›</span></button>
+<div class="sec" role="heading" aria-level="3">Autres espaces</div>${lien("chauffeur.html","Espace livreur et chauffeur","Recevoir et réaliser des courses")}${lien("fournisseur.html","Espace entreprise","Commander et suivre des livraisons en nombre")}${lien("demo.html","Visite guidée","Comprendre le projet en 5 minutes")}<p class="nt">11Barré · maquette de démonstration</p><div class="cta"><button class="btn sec2" data-a="oclose2">Fermer</button></div>`,"Menu");
+const recuLignes=h=>(h.lignes||[]).map(l=>`<div class="hl"><span>${esc(l.libelle)}</span><b>${l.montant<0?"− ":""}${F(Math.abs(l.montant))}</b></div>`).join("");
+const quand=h=>h.ts?new Date(h.ts).toLocaleString("fr-FR",{dateStyle:"long",timeStyle:"short"}):h.d||"";
+const recuNum=h=>h.id?"R-"+String(h.id).replace(/\D/g,"").slice(-8):"—";
+const recuTotal=h=>(h.p||0)+(h.tip||0);
+const recuHtml=h=>`<div class="recu" id="recu"><div class="recu-h"><span class="logo"><i>11</i>Barré</span><span class="nt">Reçu n° ${esc(recuNum(h))}</span></div><p class="nt" style="margin:6px 0">${esc(quand(h))}</p>
+<div class="hl"><span>Départ</span><b>${esc(h.de)}</b></div><div class="hl"><span>Arrivée</span><b>${esc(h.a)}</b></div><div class="hl"><span>Service</span><b>${esc(h.s)}</b></div>${h.km?`<div class="hl"><span>Distance</span><b>${h.km} km</b></div>`:""}${h.drv?`<div class="hl"><span>${h.liv?"Livreur":"Chauffeur"}</span><b>${esc(h.drv[0])} · ${esc(h.drv[2])}</b></div>`:""}
+<div class="sec">Détail</div>${h.lignes&&h.lignes.length?recuLignes(h):`<div class="hl"><span>Course</span><b>${F(h.p)}</b></div>`}${h.tip?`<div class="hl"><span>Pourboire</span><b>${F(h.tip)}</b></div>`:""}<div class="hl tot"><b>Total</b><b>${F(recuTotal(h))}</b></div>
+<p class="nt" style="margin:8px 0 0">Paiement : ${esc(h.pay||"—")}${h.payId==="cash"?" (à remettre au chauffeur)":""}. ${h.n?"Votre note : "+"★".repeat(h.n)+".":""} Reçu de démonstration, sans valeur comptable.</p></div>`;
+const shRecu=()=>ov(`<h2 style="margin:4px 0 8px">Reçu de la course</h2>${recuHtml(S.recu)}<div class="cta wrap noprint" style="margin-top:12px"><button class="btn sec2" data-a="imprimer">Imprimer</button><button class="btn" data-a="partRecu">Partager</button></div><div class="cta noprint"><button class="btn sec2" data-a="oclose2">Fermer</button></div>`,"Reçu de la course");
+const shHist=()=>ov(`<h2 style="margin:4px 0 8px">Courses et reçus</h2>${S.hist.length?S.hist.map((h,i)=>`<button class="opt" data-a="recu" data-i="${i}" aria-label="Voir le reçu : ${esc(h.de)} vers ${esc(h.a)}, ${F(recuTotal(h))}"><span class="t"><b>${esc(h.de)} → ${esc(h.a)}</b><small>${esc(h.s)} · ${esc(h.d)}${h.n?" · "+"★".repeat(h.n):""}${(h.tags||[]).length?" · "+esc(h.tags.join(", ")):""}</small></span><span class="pr">${F(recuTotal(h))}</span></button>`).join("")+`<p class="nt">Touchez une course pour voir son reçu.</p>`:'<p class="nt" style="padding:8px 2px">Aucune course pour le moment. Vos courses terminées apparaîtront ici, avec leur reçu à imprimer ou à partager.</p><div class="cta"><button class="btn" data-a="premiere">Commander une course</button></div>'}<div class="cta wrap">${S.hist.length?'<button class="btn sec2" data-a="effHist">Effacer l\'historique</button>':""}<button class="btn sec2" data-a="oclose2">Fermer</button></div>`,"Courses et reçus");
+const shSos=()=>ov(`<h2 style="margin:4px 0 8px">Besoin d'aide ?</h2><p>Votre position et les informations du trajet seront envoyées au support 11Barré (démonstration).</p><a class="btn er" style="text-decoration:none;text-align:center;display:block" href="tel:185">Appeler le SAMU (185)</a><div class="cta" style="margin-top:8px"><a class="btn sec2" style="text-decoration:none;text-align:center" href="tel:110">Police (110)</a><a class="btn sec2" style="text-decoration:none;text-align:center" href="tel:180">Pompiers (180)</a></div><p class="nt">Numéros d'urgence à vérifier avant mise en service.</p><div class="cta"><button class="btn sec2" data-a="oclose2">Fermer</button></div>`,"Aide et urgences");
+const shConfirm=()=>{const c=S.confirm;return`<div class="ov"><div class="sheet" role="alertdialog" aria-modal="true" aria-label="${esc(c.titre)}" tabindex="-1"><div class="scroll"><h2 style="margin:4px 0 8px">${esc(c.titre)}</h2><p>${esc(c.texte)}</p><div class="cta wrap"><button class="btn sec2" data-a="cfNon">${esc(c.non)}</button><button class="btn ${c.danger?"er":""}" data-a="cfOui">${esc(c.oui)}</button></div></div></div></div>`};
+const cdTxt=r=>r.real?`Nous contactons les chauffeurs proches de ${esc(S.from.n)}. S'il n'y en a aucun dans ${Math.max(0,Math.ceil((ATTENTE_REELLE-(Date.now()-r.t0))/1000))} s, une course de démonstration (chauffeur fictif) prendra le relais.`:`Aucun chauffeur n'est en ligne pour le moment : vous suivez une course de démonstration, avec un chauffeur fictif. Elle démarre dans quelques secondes. Annuler ne coûte rien.`;
+const headTxt=r=>{const liv=SERV[r.tab].liv,lbl=liv?"livreur":"chauffeur",d=r.drv;return{search:`Recherche d'un ${lbl}…`,approach:`${d[0]} arrive dans ${r.etaLeft} min`,arrived:`${d[0]} est arrivé`,ride:liv?"Colis en route":"Course en cours",end:"Terminé"}[r.step]};
+const live=()=>{const r=S.run,c=r.cat,liv=SERV[r.tab].liv,d=r.drv;
+  const head=r.step==="search"?`<span class="pulse" aria-hidden="true"></span> ${headTxt(r)}`:headTxt(r);
+  const det=r.step==="search"?`<p class="nt" id="cd">${cdTxt(r)}</p><div class="cta"><button class="btn sec2" data-a="annul">Annuler la demande</button></div>`
+  :`<div class="drv"><div class="av" aria-hidden="true">${esc(d[0][0])}</div><div style="flex:1"><b>${esc(d[0])}</b> · ★ ${d[3].toFixed(1)}<br><span class="nt">${esc(c.k==="moto"?"Moto":d[1])}</span> <span class="plate">${esc(d[2])}</span></div></div>
+  ${r.step==="approach"||r.step==="arrived"?`<div class="eb">Code de confirmation à donner au ${liv?"livreur":"chauffeur"} : <span class="code" aria-label="${r.code.split("").join(" ")}">${r.code}</span></div>`:""}
+  <div class="cta"><button class="mini" data-a="appel" aria-label="Appeler ${esc(d[0])}">📞</button><button class="mini" data-a="share" aria-label="Partager le lien de suivi">🔗</button><button class="btn sec2" data-a="annul" ${r.step==="ride"?"disabled":""}>Annuler</button></div>`;
+  return`<div class="col"><div id="map"></div><span class="demo">Démo</span><button class="sos" data-a="sos" aria-label="SOS : besoin d'aide">SOS</button><div class="sheet"><h2 style="margin:0 0 6px;font-size:20px">${head}</h2><div class="scroll">${det}</div></div></div>`};
+const TAGS_P=["Ponctuel","Aimable","Conduite prudente","Véhicule propre","Bon itinéraire"],TAGS_L=["Rapide","Aimable","Colis intact","Bien prévenu","Ponctuel"],TIPS=[0,100,200,500];
+const rate=()=>{const r=S.run,liv=SERV[r.tab].liv;return`<div class="ov rate-ov"><div class="sheet" role="dialog" aria-modal="true" aria-label="Votre avis" tabindex="-1"><div class="scroll"><h2 style="margin:4px 0;text-align:center">Merci ! Comment était votre ${liv?"livraison":"course"} ?</h2><p class="nt" style="text-align:center">${esc(r.drv[0])} · ${F(r.prix)} · ${S.pay==="cash"?"à payer en espèces":"payé avec "+esc(payLib())}</p><div class="stars" role="radiogroup" aria-label="Note">${[1,2,3,4,5].map(i=>`<button role="radio" aria-checked="${S.star===i}" class="${S.star>=i?"on":""}" data-a="star" data-n="${i}" aria-label="${i} étoile${i>1?"s":""}">★</button>`).join("")}</div>
+<div class="sec">Ce qui vous a plu (facultatif)</div><div class="chips">${(liv?TAGS_L:TAGS_P).map(t=>`<button class="tag" data-a="tag" data-v="${esc(t)}" aria-pressed="${S.tags.includes(t)}">${esc(t)}</button>`).join("")}</div>
+<div class="sec">Pourboire (facultatif)</div><div class="chips" role="radiogroup" aria-label="Pourboire">${TIPS.map(v=>`<button class="tag" role="radio" aria-checked="${S.tip===v}" aria-pressed="${S.tip===v}" data-a="tip" data-v="${v}">${v?F(v):"Aucun"}</button>`).join("")}</div><p class="nt">Démonstration : aucun montant n'est débité.</p>
+<div class="cta wrap"><button class="btn sec2" data-a="recuRun">Voir le reçu</button><button class="btn" data-a="fin">Terminer</button></div></div></div></div>`};
+function render(){const a=$("#app"),fk=fkey(document.activeElement),hadDlg=!!a.querySelector(".ov,.full");let h="";
+  if(S.ph==="home")h=home();else if(S.ph==="trip")h=trip();else if(S.ph==="live"&&S.run)h=live();
+  if(S.pick)h+=picker();
+  if(S.ph==="live"&&S.run&&S.run.step==="end")h+=rate();
+  if(S.sheet==="pay")h+=shPay();else if(S.sheet==="det")h+=shDet();else if(S.sheet==="menu")h+=shMenu();else if(S.sheet==="hist")h+=shHist();else if(S.sheet==="sos")h+=shSos();else if(S.sheet==="recu"&&S.recu)h+=shRecu();
+  if(S.confirm)h+=shConfirm();
+  a.innerHTML=h;carte();if(S.pick)plist();
+  const dlg=[...a.querySelectorAll(".ov .sheet,.full")].pop();let el=fk&&a.querySelector(fk);if(el&&dlg&&!dlg.contains(el))el=null;
+  if(el)el.focus({preventScroll:true});
+  else if(S.pick){const q=$("#pq");if(q)q.focus()}
+  else if(dlg&&(!hadDlg||!dlg.contains(document.activeElement)))dlg.focus({preventScroll:true});
+  else if(!dlg&&hadDlg&&S.opener){const o=a.querySelector(S.opener);if(o)o.focus({preventScroll:true});S.opener=null}
+  saveDraft();syncHist()}
+/* Accessibilité : sélecteur de l'élément ayant le focus (pour le rendre après un nouveau rendu), annonces, piège de focus */
+function fkey(el){if(!el||el===document.body||!el.getAttribute)return"";if(el.id)return"#"+el.id;let s="";for(const k of["a","k","p","c","n","v","i"]){const v=el.getAttribute("data-"+k);if(v!=null)s+=`[data-${k}="${String(v).replace(/"/g,'\\"')}"]`}return s}
+const say=m=>{const r=$("#sr");if(!r)return;r.textContent="";setTimeout(()=>{r.textContent=m},60)};
+const toast=m=>{document.querySelectorAll("#toast").forEach(x=>x.remove());const t=document.createElement("div");t.id="toast";t.setAttribute("aria-hidden","true");t.textContent=m;$("#app").appendChild(t);say(m);setTimeout(()=>t.remove(),3200)};
+const ouvre=()=>{S.opener=fkey(document.activeElement)};
+/* Bouton retour d'Android et historique du navigateur : un cran d'historique par « couche » ouverte */
+let HD=(history.state&&history.state.d)||0,saute=false;
+const profondeur=()=>(S.ph==="home"?0:1)+(S.pick?1:0)+(S.sheet?1:0)+(S.confirm?1:0);
+function syncHist(){const d=profondeur();try{if(d>HD){for(;HD<d;HD++)history.pushState({d:HD+1},"")}else if(d<HD){const n=HD-d;HD=d;saute=true;history.go(-n)}}catch(e){}}
+function couche(){if(S.confirm){A.cfNon();return}if(S.pick){S.pick=null;render();return}if(S.sheet){A.oclose2();return}if(S.ph==="trip"){A.home();return}}
+window.addEventListener("popstate",()=>{if(saute){saute=false;return}HD=Math.max(0,HD-1);
+  if(S.ph==="live"&&!S.sheet&&!S.confirm&&!S.pick){try{history.pushState({d:++HD},"")}catch(e){}toast(S.run&&S.run.step==="end"?"Donnez votre avis, puis touchez Terminer.":"Course en cours : utilisez « Annuler » pour l'arrêter.");return}
+  couche()});
+/* Brouillon de commande et course en cours : repris après un rechargement de la page */
+function saveDraft(){if(S.run||S.ph!=="trip"||!S.to){if(!S.run&&S.ph==="home")LS.set("brouillon",null);return}LS.set("brouillon",{t:Date.now(),tab:S.tab,from:S.from.n,to:S.to.n,cat:S.cat,o:S.o})}
+function saveRun(){if(S.run)LS.set("course",Object.assign({},S.run,{cat:S.run.cat.id,pay:S.pay,fromN:S.from.n,toN:S.to?S.to.n:S.run.a,o:S.o,saved:Date.now()}))}
+function clearRun(){LS.set("course",null);LS.set("brouillon",null)}
+/* Position : géolocalisation si autorisée, sinon position de démonstration */
+function plusProche(q){return LIEUX.slice(1).map(l=>({l,d:km(q,l)})).sort((a,b)=>a.d-b.d)[0]}
 /* Course simulée : recherche → approche → arrivée → trajet → fin */
 let tm=null;
-function lancer(){const c=catCur(),d=DRV[Math.floor(Math.random()*DRV.length)],ap=approche(c),du=duree();
- S.run={tab:S.tab,cat:c,drv:d,code:String(1000+Math.floor(Math.random()*9000)),prix:total(c),step:"search",f:0,eta:ap,etaLeft:ap,ap,du,t0:Date.now(),de:S.from.n,a:S.to.n};S.run.id="c"+Date.now();S.run.real=(Date.now()-LS.get("chauffeur_ligne",0))<10000;
- if(S.run.real)LS.set("commande",{id:S.run.id,tab:S.tab,k:c.k,cat:c.nom,de:{n:S.from.n,z:S.from.z,la:S.from.la,lo:S.from.lo},a:{n:S.to.n,z:S.to.z,la:S.to.la,lo:S.to.lo},prix:S.run.prix,pay:S.pay,payLib:payLib(),devis:devisC(c),km:+dist().toFixed(1),du,ap,code:S.run.code,liv:!!SERV[S.tab].liv,colis:SERV[S.tab].liv?{n:S.o.dN,t:S.o.dT,c:S.o.colis,cod:+S.o.cod||0,payeur:S.o.payeur,vit:vit().n}:null,statut:"recherche",chauffeur:null,t:Date.now()});
- S.ph="live";S.sheet=null;render();
- clearInterval(tm);tm=setInterval(tick,120)}
+function lancer(){const c=catCur();if(S.run||!c||!S.to)return;const d=DRV[Math.floor(Math.random()*DRV.length)],ap=approche(c),du=duree(),dv=devisC(c);
+  S.run={tab:S.tab,cat:c,drv:d,code:String(1000+Math.floor(Math.random()*9000)),prix:total(c),step:"search",f:0,eta:ap,etaLeft:ap,ap,du,t0:Date.now(),de:S.from.n,a:S.to.n,lignes:dv.lignes,km:+dist().toFixed(1),payLib:payLib(),payId:S.pay,dest:SERV[S.tab].liv?S.o.dN:""};S.run.id="c"+Date.now();S.run.real=drvOnline();
+  if(S.run.real)LS.set("commande",{id:S.run.id,tab:S.tab,k:c.k,cat:c.nom,de:{n:S.from.n,z:S.from.z,la:S.from.la,lo:S.from.lo},a:{n:S.to.n,z:S.to.z,la:S.to.la,lo:S.to.lo},prix:S.run.prix,pay:S.pay,payLib:payLib(),devis:dv,km:+dist().toFixed(1),du,ap,code:S.run.code,liv:!!SERV[S.tab].liv,colis:SERV[S.tab].liv?{n:S.o.dN,t:S.o.dT,c:S.o.colis,cod:+S.o.cod||0,payeur:S.o.payeur,vit:vit().n}:null,statut:"recherche",chauffeur:null,t:Date.now()});
+  S.ph="live";S.sheet=null;S.star=0;S.tip=0;S.tags=[];saveRun();render();say(headTxt(S.run));
+  clearInterval(tm);tm=setInterval(tick,120)}
+function pasSuivant(r,old){if(r.step!==old){saveRun();render();say(headTxt(r));return true}return false}
+function majDom(r){if(r.step==="approach"||r.step==="ride"){carte();const h=document.querySelector(".sheet h2");if(h&&r.step==="approach")h.textContent=headTxt(r)}else if(r.step==="search"){const e=$("#cd");if(e)e.textContent=cdTxt(r)}}
 function tick(){const r=S.run;if(!r){clearInterval(tm);return}if(r.real)return tickReel(r);const t=(Date.now()-r.t0)/1000,old=r.step;
- if(t<2.5)r.step="search";else if(t<10.5){r.step="approach";r.f=(t-2.5)/8;r.etaLeft=Math.max(1,Math.ceil(r.ap*(1-r.f)))}else if(t<13){r.step="arrived";r.f=1}else if(t<24){r.step="ride";r.f=(t-13)/11;r.etaLeft=Math.max(0,Math.ceil(r.du*(1-r.f)))}else{r.step="end";clearInterval(tm)}
- if(r.step!==old){render();return}if(r.step==="approach"||r.step==="ride"){carte();const h=document.querySelector(".sheet h2");if(h&&r.step==="approach")h.textContent=r.drv[0]+" arrive dans "+r.etaLeft+" min"}}
+  if(t<2.5)r.step="search";else if(t<10.5){r.step="approach";r.f=(t-2.5)/8;r.etaLeft=Math.max(1,Math.ceil(r.ap*(1-r.f)))}else if(t<13){r.step="arrived";r.f=1}else if(t<24){r.step="ride";r.f=(t-13)/11;r.etaLeft=Math.max(0,Math.ceil(r.du*(1-r.f)))}else{r.step="end";r.fin=r.fin||Date.now();clearInterval(tm)}
+  if(pasSuivant(r,old))return;majDom(r)}
 /* Course suivie avec un vrai chauffeur (espace chauffeur ouvert sur le même appareil) : l'état vient de la commande partagée */
 function tickReel(r){const c=LS.get("commande",null),old=r.step,now=Date.now(),st=c&&c.id===r.id?c.statut:"annulee";
- if(st==="recherche"){if(now-r.t0>20000){r.real=false;r.t0=now-2500;toast("Aucun chauffeur n'a répondu : course de démonstration");return}r.step="search"}
- else if(st==="acceptee"){r.step="approach";r.drv=c.chauffeur;r.ta=r.ta||now;r.f=Math.min(.95,(now-r.ta)/30000);r.etaLeft=Math.max(1,Math.ceil(r.ap*(1-r.f)))}
- else if(st==="arrivee"){r.step="arrived";r.f=1}
- else if(st==="demarree"){r.step="ride";r.td=r.td||now;r.f=Math.min(.95,(now-r.td)/40000);r.etaLeft=Math.max(1,Math.ceil(r.du*(1-r.f)))}
- else if(st==="terminee"){r.step="end";clearInterval(tm)}
- else{clearInterval(tm);S.run=null;S.ph="trip";render();toast("Le chauffeur a annulé la course");return}
- if(r.step!==old){render();return}if(r.step==="approach"||r.step==="ride"){carte();const h=document.querySelector(".sheet h2");if(h&&r.step==="approach")h.textContent=r.drv[0]+" arrive dans "+r.etaLeft+" min"}}
+  if(st==="recherche"){if(now-r.t0>ATTENTE_REELLE){r.real=false;r.t0=now-2500;if(c&&c.id===r.id)LS.set("commande",Object.assign(c,{statut:"annulee_client"}));toast("Aucun chauffeur n'a répondu : course de démonstration");saveRun();render();return}r.step="search"}
+  else if(st==="acceptee"){r.step="approach";r.drv=c.chauffeur;r.ta=r.ta||now;r.f=Math.min(.95,(now-r.ta)/30000);r.etaLeft=Math.max(1,Math.ceil(r.ap*(1-r.f)))}
+  else if(st==="arrivee"){r.step="arrived";r.f=1}
+  else if(st==="demarree"){r.step="ride";r.td=r.td||now;r.f=Math.min(.95,(now-r.td)/40000);r.etaLeft=Math.max(1,Math.ceil(r.du*(1-r.f)))}
+  else if(st==="terminee"){r.step="end";r.fin=r.fin||now;clearInterval(tm)}
+  else{clearInterval(tm);S.run=null;S.ph="trip";clearRun();render();toast(st==="annulee_client"?"Commande annulée":"Le chauffeur a annulé la course");return}
+  if(pasSuivant(r,old))return;majDom(r)}
 /* Actions */
+const histFrom=(r,star,tip,tags)=>{const t=r.fin||Date.now(),liv=!!SERV[r.tab].liv;return{id:r.id.replace(/\D/g,""),ts:t,de:r.de,a:r.a,p:r.prix,s:SERV[r.tab].nom+" "+r.cat.nom,d:new Date(t).toLocaleDateString("fr-FR"),n:star||0,tip:tip||0,tags:(tags||[]).slice(),drv:[r.drv[0],r.cat.k==="moto"?"Moto":r.drv[1],r.drv[2]],pay:r.payLib,payId:r.payId,lignes:r.lignes||[],km:r.km,liv,dest:r.dest||""}};
+const recuTexte=h=>`Reçu 11Barré n° ${recuNum(h)} · ${quand(h)}\n${h.de} → ${h.a} (${h.s})\n${h.drv?(h.liv?"Livreur":"Chauffeur")+" : "+h.drv[0]+" · "+h.drv[2]+"\n":""}Total : ${F(recuTotal(h))}${h.tip?" dont pourboire "+F(h.tip):""} · ${h.pay||""}\n(démonstration, sans valeur comptable)`;
+const partager=(titre,texte)=>{const url=location.href.split("#")[0].split("?")[0];if(navigator.share)navigator.share({title:titre,text:texte,url}).catch(()=>{});else if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(texte+"\n"+url).then(()=>toast("Texte copié : vous pouvez le coller dans un message"),()=>toast("Partage indisponible sur cet appareil"));else toast("Partage indisponible sur cet appareil")};
+const erreurLiv=c=>{if(S.o.dN.trim().length<2)return"Indiquez le nom du destinataire.";if(S.o.dT.replace(/\D/g,"").length<8)return"Indiquez un numéro de téléphone valide pour le destinataire (8 chiffres au moins).";if(c.cod&&!(Number.isInteger(+S.o.cod)&&+S.o.cod>0))return"Indiquez le montant que le livreur doit encaisser (en francs, sans virgule).";return""};
+let bt=null;
 const A={
- home(){S.ph="home";S.to=null;S.cat=null;S.run=null;clearInterval(tm);render()},
- svc(t){S.tab=t.dataset.v;S.ph="trip";S.cat=null;S.to?autoCat():null;render()},
- dest(){S.pick="to";S.q="";render()},
- rec(t){S.to=lieu(t.dataset.n);S.tab="courses";S.ph="trip";autoCat();render()},
- tab(t){S.tab=t.dataset.v;S.cat=null;autoCat();render()},
- cat(t){S.cat=t.dataset.c;render()},
- pf(){S.pick="from";S.q="";render()},pt(){S.pick="to";S.q="";render()},
- pclose(){S.pick=null;render()},
- pset(t){const l=lieu(t.dataset.n);if(S.pick==="from")S.from=l;else{S.to=l;S.rec=[l.n].concat(S.rec.filter(x=>x!==l.n)).slice(0,5);LS.set("rec",S.rec)}S.pick=null;if(S.ph==="home")S.ph="trip";autoCat();render()},
- menu(){S.sheet="menu";render()},devenir(){location.href="chauffeur.html"},hist(){S.sheet="hist";render()},paie(){S.sheet="pay";render()},det(){S.sheet="det";render()},sos(){S.sheet="sos";render()},
- pay(t){S.pay=t.dataset.p;LS.set("pay",S.pay);render()},
- vit(t){S.o.vit=t.dataset.p;render()},payeur(t){S.o.payeur=t.dataset.p;render()},
- oclose(t,e){if(e.target.closest("[data-stop]")&&!e.target.closest("[data-a]:not([data-a=oclose])"))return;S.sheet=null;render()},
- oclose2(){S.sheet=null;render()},
- cmd(){const c=catCur();if(!S.to||!c)return;if(SERV[S.tab].liv&&(S.o.dT.replace(/\D/g,"").length<8)){S.sheet="det";render();toast("Indiquez le téléphone du destinataire");return}lancer()},
- annul(){const c=LS.get("commande",null);if(c&&S.run&&S.run.real)LS.set("commande",Object.assign(c,{statut:"annulee_client"}));clearInterval(tm);S.run=null;S.ph="trip";render();toast("Commande annulée")},
- star(t){S.star=+t.dataset.n;render()},
- fin(){const r=S.run;LS.set("commande",null);S.hist.unshift({de:r.de,a:r.a,p:r.prix,s:SERV[r.tab].nom+" "+r.cat.nom,d:new Date().toLocaleDateString("fr-FR"),n:S.star});S.hist=S.hist.slice(0,30);LS.set("hist",S.hist);S.star=0;A.home();toast("Merci pour votre avis")},
- share(){const t="Je suis en route avec 11Barré : "+S.run.de+" → "+S.run.a+" (démo)";if(navigator.share)navigator.share({text:t}).catch(()=>{});else{try{navigator.clipboard.writeText(t);toast("Trajet copié")}catch(e){toast("Partage indisponible")}}}};
+  home(){if(S.run)return;clearTimeout(bt);S.busy=false;S.ph="home";S.to=null;S.cat=null;S.err="";S.pick=null;S.sheet=null;clearRun();render()},
+  svc(t){S.tab=t.dataset.v;S.ph="trip";S.cat=null;S.to?autoCat():null;render()},
+  dest(){ouvre();S.pick="to";S.q="";render()},
+  rec(t){S.to=lieu(t.dataset.n);S.tab="courses";S.ph="trip";autoCat();render()},
+  tab(t){S.tab=t.dataset.v;S.cat=null;autoCat();render()},
+  cat(t){S.cat=t.dataset.c;render()},
+  pf(){ouvre();S.pick="from";S.q="";render()},pt(){ouvre();S.pick="to";S.q="";render()},
+  pclose(){S.pick=null;render()},pvoir(){S.q="";const q=$("#pq");if(q){q.value="";q.focus()}plist()},
+  pset(t){const l=lieu(t.dataset.n);if(S.pick==="from"){if(S.to&&S.to.n===l.n){toast("Le départ et l'arrivée sont identiques : choisissez un autre lieu.");return}S.from=l;S.gps=false;LS.set("pos",null)}else{if(S.from.n===l.n){toast("Le départ et l'arrivée sont identiques : choisissez un autre lieu.");return}S.to=l;S.rec=[l.n].concat(S.rec.filter(x=>x!==l.n)).slice(0,5);LS.set("rec",S.rec)}S.pick=null;if(S.ph==="home")S.ph="trip";autoCat();render()},
+  loc(){if(S.loc==="wait")return;const fin=(m)=>{S.loc="";S.pick=null;render();toast(m)};
+    if(!navigator.geolocation)return toast("Localisation indisponible sur cet appareil : position de démonstration conservée.");
+    S.loc="wait";render();
+    try{navigator.geolocation.getCurrentPosition(p=>{const n=plusProche({la:p.coords.latitude,lo:p.coords.longitude});if(n.d>60){fin("Vous semblez loin d'Abidjan : position de démonstration conservée.");return}S.from=n.l;S.gps=true;LS.set("pos",n.l.n);fin("Position : lieu le plus proche, "+n.l.n)},e=>fin(e&&e.code===1?"Localisation refusée : position de démonstration conservée.":"Position introuvable : position de démonstration conservée."),{timeout:8000,maximumAge:60000})}catch(e){fin("Localisation indisponible : position de démonstration conservée.")}},
+  menu(){ouvre();S.sheet="menu";render()},hist(){S.sheet="hist";render()},paie(){ouvre();S.sheet="pay";render()},det(){ouvre();S.err="";S.sheet="det";render()},sos(){ouvre();S.sheet="sos";render()},
+  welNext(){if(S.wel>=WEL.length-1)return A.welSkip();S.wel++;render()},welSkip(){S.wel=-1;LS.set("accueil_vu",true);render()},
+  welAgain(){S.wel=0;LS.set("accueil_vu",false);S.sheet=null;S.ph="home";S.to=null;render();const w=$(".wel");if(w)w.scrollIntoView({block:"nearest"})},
+  premiere(){S.sheet=null;S.ph="home";render()},
+  pay(t){S.pay=t.dataset.p;LS.set("pay",S.pay);render()},
+  vit(t){S.o.vit=t.dataset.p;render()},payeur(t){S.o.payeur=t.dataset.p;render()},
+  oclose(t,e){if(e.target.closest("[data-stop]")&&!e.target.closest("[data-a]:not([data-a=oclose])"))return;A.oclose2()},
+  oclose2(){S.sheet=(S.sheet==="recu"&&S.prev)?S.prev:null;S.prev=null;S.err="";render()},
+  cmd(){if(S.busy||S.run)return;const c=catCur();if(!S.to||!c)return;
+    if(SERV[S.tab].liv){const e=erreurLiv(c);if(e){S.err=e;S.sheet="det";render();return}}
+    S.busy=true;render();bt=setTimeout(()=>{S.busy=false;if(S.ph==="trip"&&!S.run)lancer();else render()},600)},
+  annul(){const r=S.run;if(!r)return;if(r.step==="search"||r.step==="end"){A.annulOk();return}
+    ouvre();S.confirm={titre:"Annuler la course ?",texte:(r.step==="approach"||r.step==="arrived"?r.drv[0]+" est déjà en route vers vous. ":"")+"Dans la version réelle, des frais d'annulation pourront s'appliquer. Ici, aucun montant n'est débité.",oui:"Oui, annuler",non:"Non, continuer",act:"annulOk",danger:true};render()},
+  annulOk(){S.confirm=null;const c=LS.get("commande",null);if(c&&S.run&&S.run.real)LS.set("commande",Object.assign(c,{statut:"annulee_client"}));clearInterval(tm);S.run=null;S.ph="trip";clearRun();render();toast("Commande annulée")},
+  cfOui(){const a=S.confirm&&S.confirm.act;S.confirm=null;if(a&&A[a])A[a]();else render()},cfNon(){S.confirm=null;render()},
+  effHist(){ouvre();S.confirm={titre:"Effacer l'historique ?",texte:"Toutes les courses et tous les reçus enregistrés sur cet appareil seront supprimés.",oui:"Oui, effacer",non:"Non, garder",act:"effHistOk",danger:true};render()},
+  effHistOk(){S.hist=[];LS.set("hist",[]);S.sheet="hist";render();toast("Historique effacé")},
+  star(t){S.star=+t.dataset.n;if(S.run)S.run.star=S.star;saveRun();render()},
+  tag(t){const v=t.dataset.v;S.tags=S.tags.includes(v)?S.tags.filter(x=>x!==v):S.tags.concat(v);saveRun();render()},
+  tip(t){S.tip=+t.dataset.v;saveRun();render()},
+  recu(t){const h=S.hist[+t.dataset.i];if(!h)return;S.recu=h;S.prev="hist";S.sheet="recu";render()},
+  recuRun(){const r=S.run;if(!r)return;ouvre();S.recu=histFrom(r,S.star,S.tip,S.tags);S.prev=null;S.sheet="recu";render()},
+  imprimer(){window.print()},
+  partRecu(){if(S.recu)partager("Reçu 11Barré",recuTexte(S.recu))},
+  appel(){toast("L'appel n'est pas disponible dans la démonstration.")},
+  fin(){const r=S.run;if(!r)return;S.hist.unshift(histFrom(r,S.star,S.tip,S.tags));S.hist=S.hist.slice(0,30);LS.set("hist",S.hist);LS.set("commande",null);S.star=0;S.tip=0;S.tags=[];S.o=O0();S.run=null;S.recu=null;S.sheet=null;A.home();toast("Merci pour votre avis")},
+  share(){const r=S.run;if(!r)return;partager("Ma course 11Barré","Je suis en route avec 11Barré : "+r.de+" → "+r.a+". "+(SERV[r.tab].liv?"Livreur ":"Chauffeur ")+r.drv[0]+", plaque "+r.drv[2]+". Arrivée vers "+hh(Math.max(0,r.etaLeft||r.du))+". (démonstration : le lien ouvre l'application, le suivi en direct viendra avec la version connectée)")}};
 function autoCat(){if(!S.to){S.cat=null;return}const it=SERV[S.tab].items.filter(c=>!c.ind);if(!it.find(c=>c.id===S.cat))S.cat=(S.tab==="courses"&&it[1]||it[0]).id}
 document.addEventListener("click",e=>{const t=e.target.closest("[data-a]");if(!t)return;const f=A[t.dataset.a];if(f){f(t,e);}});
-document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.k;if(k){S.o[k]=e.target.type==="checkbox"?e.target.checked:e.target.value;if(k==="porte")render();return}if(e.target.id==="pq"){S.q=e.target.value;plist()}});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(S.pick)A.pclose();else if(S.sheet)A.oclose2()}});
+document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.k;if(k){S.o[k]=e.target.type==="checkbox"?e.target.checked:e.target.value;if(S.err){S.err=""}if(k==="porte")render();else saveDraft();return}if(e.target.id==="pq"){S.q=e.target.value;plist()}});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){if(S.confirm)A.cfNon();else if(S.pick)A.pclose();else if(S.sheet)A.oclose2()}
+  else if(e.key==="Tab"){const dl=[...document.querySelectorAll("#app .ov .sheet,#app .full")].pop();if(!dl)return;const f=[...dl.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])')].filter(x=>x.offsetParent!==null);if(!f.length)return;const a=document.activeElement,p=f[0],d=f[f.length-1];if(!dl.contains(a)||a===dl){e.preventDefault();(e.shiftKey?d:p).focus()}else if(e.shiftKey&&a===p){e.preventDefault();d.focus()}else if(!e.shiftKey&&a===d){e.preventDefault();p.focus()}}});
+window.addEventListener("online",()=>{if(S.ph==="home")render()});window.addEventListener("offline",()=>{if(S.ph==="home")render()});
 if("serviceWorker"in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(()=>{});
+/* Reprise après rechargement : course en cours, sinon brouillon de commande récent */
+(function reprise(){const c=LS.get("course",null);
+  if(c&&c.tab&&SERV[c.tab]){const cat=SERV[c.tab].items.find(x=>x.id===c.cat),cm=LS.get("commande",null);
+    if(cat&&Date.now()-c.t0<6*3600*1000&&!(c.real&&(!cm||cm.id!==c.id))){const r=Object.assign({},c,{cat});delete r.fromN;delete r.toN;delete r.o;delete r.saved;
+      S.tab=c.tab;S.from=lieu(c.fromN)||S.from;S.to=lieu(c.toN)||lieu(c.a);S.cat=c.cat;S.pay=c.pay||S.pay;S.o=Object.assign(O0(),c.o||{});S.run=r;S.ph="live";S.star=r.star||0;S.tip=r.tip||0;S.tags=r.tags||[];
+      clearInterval(tm);tm=setInterval(tick,120);setTimeout(()=>toast("Votre course en cours a été reprise."),300);return}
+    LS.set("course",null)}
+  const b=LS.get("brouillon",null);
+  if(b&&Date.now()-b.t<30*60000&&SERV[b.tab]&&lieu(b.to)){S.tab=b.tab;S.from=lieu(b.from)||S.from;S.to=lieu(b.to);S.o=Object.assign(O0(),b.o||{});S.ph="trip";S.cat=b.cat;autoCat()}})();
 render();
 </script>
 </body>

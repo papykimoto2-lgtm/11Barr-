@@ -8,6 +8,7 @@ let ok=0,ko=0;const t=(l,c,d)=>{if(c){ok++;console.log("PASS",l)}else{ko++;conso
 const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:1100,height:900}});const errs=[];
 const mk=async(u,vp)=>{const p=await ctx.newPage();if(vp)await p.setViewportSize(vp);p.on("pageerror",e=>errs.push(u+": "+e.message));await p.goto(base+"/"+u);return p};
 const pf=await mk("fournisseur.html"),pd=await mk("chauffeur.html",{width:390,height:800}),pa=await mk("admin.html");
+const confirmer=p=>p.click('[data-a=confirmok]');
 const toast=async p=>(await p.$$eval("#toast",e=>e.map(n=>n.textContent).join(" | ")).catch(()=>""))||"";
 /* --- inscription et validation --- */
 t("inscription : formulaire affiché",!!(await pf.$('[data-a=creerorg]')));
@@ -61,11 +62,11 @@ await pa.click('[data-a=tab][data-t=finance]');await pa.click('[data-a=approuver
 t("reversement impossible tant que les livreurs n'ont pas remis les fonds",(await toast(pa)).includes("pas encore remis"));
 await pd.click('[data-a=tab][data-t=gains]');await pd.click('[data-a=vers]');await pd.click('[data-a=envoyerv]');
 await pa.waitForSelector('[data-a=validervers]',{timeout:4000});await pa.click('[data-a=validervers]');t("versement du livreur validé par l'administration",(await toast(pa)).includes("validé"));
-await pa.click('[data-a=executer][data-k=rev]');
+await pa.click('[data-a=executer][data-k=rev]');t("exécution : confirmation demandée avant l'écriture au journal",!!(await pa.$('[role=alertdialog]')));await confirmer(pa);
 await pf.click('[data-a=tab][data-t=livraisons]');await pf.click('[data-a=tab][data-t=paiements]');await pf.waitForFunction(()=>document.querySelector("main").textContent.includes("Versé"),null,{timeout:6000});
 t("reversement exécuté après remise des fonds par le livreur",(await pf.evaluate(()=>M.fondsTiers(ledger())))===7000);
 t("journal équilibré, fonds de tiers hors revenu",await pf.evaluate(()=>M.equilibre(ledger())&&M.revenuPropre(ledger())<2000));
-await pf.click('[data-a=tab][data-t=factures]');await pf.click('[data-a=facturer]');
+await pf.click('[data-a=tab][data-t=factures]');await pf.click('[data-a=facturer]');t("facture : confirmation demandée",!!(await pf.$('[role=alertdialog]')));await confirmer(pf);
 const fac=(await pf.evaluate(()=>LS.get("factures",[])))[0];t("facture périodique générée et numérotée",!!fac&&/^FAC-\d{4}-0001$/.test(fac.numero)&&fac.total===o2.devis.total,fac);
 await pf.click('[data-a=voirfac]');await pf.screenshot({path:SP+"p6-facture.png"});await pf.click('.pop [data-a=fermer]');
 t("la livraison facturée n'est plus proposée",(await pf.evaluate(()=>LIV.lire()[0].facture))===fac.numero);
@@ -75,7 +76,7 @@ await pf.waitForFunction(()=>document.querySelector("main").textContent.includes
 /* --- import CSV --- */
 await pf.click('[data-a=tab][data-t=import]');await pf.click('[data-a=exemple]');await pf.click('[data-a=analyser]');
 const ap=await pf.textContent('main');t("import : aperçu — 2 lignes valides, 3 en erreur",ap.includes("2 valide(s), 3 en erreur")&&ap.includes("destination inconnue")&&ap.includes("téléphone invalide")&&ap.includes("doublon"),ap.slice(ap.indexOf("Aperçu"),ap.indexOf("Aperçu")+60));
-await pf.screenshot({path:SP+"p7-import.png"});await pf.click('[data-a=importer]');
+await pf.screenshot({path:SP+"p7-import.png"});await pf.click('[data-a=importer]');await pf.waitForFunction(()=>document.querySelector("main").textContent.includes("livraison(s) créée(s)"),null,{timeout:6000});
 t("import : 2 livraisons créées, rapport d'erreurs téléchargeable",(await pf.evaluate(()=>LIV.lire().length))===3&&(await pf.textContent('main')).includes("2 livraison(s) créée(s)")&&!!(await pf.$('a[download]')));
 await pf.click('[data-a=exemple]');await pf.click('[data-a=analyser]');t("import rejoué : plus aucune ligne valide (pas de doublon)",(await pf.textContent('main')).includes("0 valide(s)"));
 /* --- rôles --- */
@@ -89,6 +90,6 @@ await pf.selectOption('[data-user]','u1');
 await pf.evaluate(()=>{const l=LIV.lire();l.push(Object.assign({},l[0],{id:"autre",org:"AUTRE",ref:"11B-X",statut:"ready_for_assignment"}));LIV.ecrire(l)});await pf.click('[data-a=tab][data-t=livraisons]');
 t("isolation : un autre fournisseur ne voit pas les livraisons d'autrui",!(await pf.textContent('main')).includes("11B-X"));
 await pf.click('tr.k >> nth=0');const ann=await pf.$('[data-a=annulerliv]');t("annulation proposée sur une livraison en recherche",!!ann);
-if(ann){await ann.click();await pf.waitForTimeout(300);const s=(await pf.evaluate(()=>LIV.lire().filter(o=>o.org===P.org.id).sort((a,b)=>b.cree_le-a.cree_le)[0].statut));t("annulation : statut annulé",s==="cancelled",s)}
+if(ann){await ann.click();t("annulation : confirmation demandée, rien n'est annulé avant",!!(await pf.$('[role=alertdialog]'))&&(await pf.evaluate(()=>LIV.lire().find(o=>o.org===P.org.id&&o.statut==="ready_for_assignment")!==undefined)));await confirmer(pf);await pf.waitForTimeout(300);const s=(await pf.evaluate(()=>LIV.lire().filter(o=>o.org===P.org.id).sort((a,b)=>b.cree_le-a.cree_le)[0].statut));t("annulation : statut annulé",s==="cancelled",s)}
 t("aucune erreur JavaScript",errs.length===0,errs);
 console.log(ok+" PASS, "+ko+" FAIL");await b.close();srv.close();process.exit(ko?1:0)})().catch(e=>{console.log("EXC",e.message.split("\n").slice(0,3).join(" | "));process.exit(1)});

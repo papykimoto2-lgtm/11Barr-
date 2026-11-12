@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1b2a">
+<meta name="description" content="Visite guidée de 11Barré : comprendre en cinq minutes les quatre espaces (client, livreur, entreprise, administration) avec un jeu de données de démonstration.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>11Barré — Visite guidée</title>
+<style>
+:root{--bg:#f4f1ea;--card:#fff;--ink:#0d1b2a;--mu:#5b6677;--acc:#ffc21a;--accink:#1a1300;--ok:#0f7a4b;--er:#c62828;--er-t:#b3261e;--line:#e3ded2;--soft:#efeadf;--focus:#0d1b2a}
+@media (prefers-color-scheme:dark){:root{--bg:#0b141f;--card:#142233;--ink:#f2f4f7;--mu:#9aa7b8;--line:#243449;--soft:#1b2c42;--ok:#4cc38a;--er-t:#ff9a90;--focus:#ffc21a}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{margin:0;font:16px/1.5 system-ui,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+button,a{font:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1000px;margin:0 auto;padding:max(18px,env(safe-area-inset-top)) 16px 48px}
+.logo{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:24px;letter-spacing:-.5px}
+.logo i{position:relative;font-style:normal;background:var(--acc);color:var(--accink);border-radius:8px;padding:0 7px;line-height:1.25}
+.logo i:after{content:"";position:absolute;left:-3px;right:-3px;top:50%;height:3px;background:var(--ink);transform:rotate(-14deg);border-radius:2px;opacity:.9}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:clamp(28px,6vw,42px);line-height:1.1;margin:18px 0 8px;letter-spacing:-.5px}
+h2{font-size:22px;margin:0 0 10px}
+.lead{font-size:18px;color:var(--mu);max-width:62ch;margin:0}
+.nt{font-size:14px;color:var(--mu)}
+section{margin-top:34px}
+.card{background:var(--card);border-radius:20px;padding:18px;box-shadow:0 1px 0 var(--line);border:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:0;border-radius:14px;padding:12px 20px;font-weight:800;font-size:17px;background:var(--acc);color:var(--accink);cursor:pointer;text-decoration:none}
+.btn.sec{background:var(--soft);color:var(--ink)}
+.btn.er{background:var(--er);color:#fff}
+.btn:disabled{opacity:.6;cursor:default}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.stats div{background:var(--soft);border-radius:14px;padding:12px}
+.stats b{display:block;font-size:24px;line-height:1.2}
+.stats span{font-size:13px;color:var(--mu)}
+.ok{color:var(--ok);font-weight:800}.ko{color:var(--er-t);font-weight:800}
+.grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media (min-width:640px){.grid{grid-template-columns:1fr 1fr}}
+@media (min-width:980px){.grid.quatre{grid-template-columns:repeat(4,1fr)}}
+.esp{display:flex;flex-direction:column;gap:8px}
+.esp .ic{width:44px;height:44px;border-radius:14px;background:var(--ink);color:var(--card);display:grid;place-items:center;font-weight:900;font-size:20px}
+.esp h3{margin:4px 0 0;font-size:19px}.esp p{margin:0;flex:1}
+.esp .btn{align-self:flex-start}
+ol.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:grid;gap:12px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
+ol.steps li:before{content:counter(s);width:44px;height:44px;border-radius:50%;background:var(--acc);color:var(--accink);display:grid;place-items:center;font-weight:900;font-size:20px}
+ol.steps b{font-size:17px}.steps p{margin:2px 0 6px;color:var(--mu)}
+ul.chk{margin:8px 0 0;padding-left:20px}ul.chk li{margin:4px 0}
+.lnk{font-weight:800;color:var(--ink);text-underline-offset:3px}
+#msg{min-height:1.5em;margin-top:12px;font-weight:700}
+.ov{position:fixed;inset:0;background:rgba(5,12,22,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.ov[hidden]{display:none}
+.dlg{background:var(--card);border-radius:20px;padding:20px;max-width:440px;width:100%}
+.dlg h2{margin-top:0}
+.cle{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--soft);padding:1px 6px;border-radius:6px}
+footer{margin-top:40px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><span class="logo"><i>11</i>Barré</span><a class="btn sec" href="index.html">Ouvrir l'application client</a></header>
+<main>
+<h1>Visite guidée</h1>
+<p class="lead">11Barré est une plateforme de transport et de logistique pour la Côte d'Ivoire : courses en voiture, moto-taxi, livraison à moto, cargo, portail pour les entreprises et paiement à la livraison. Cette page vous fait tout comprendre en cinq minutes.</p>
+
+<section aria-labelledby="t-etat">
+<h2 id="t-etat">1. Les données de démonstration</h2>
+<div class="card">
+<p style="margin:0">Tout fonctionne dans votre navigateur, sans serveur : les quatre espaces partagent le même stockage local. Chargez un jeu de données cohérent (entreprises, livreurs, livraisons, journal financier), puis parcourez les espaces. Aucune donnée réelle : les noms, numéros et plaques sont fictifs.</p>
+<div class="actions">
+<button class="btn" id="charger" type="button">Charger un jeu de données de démonstration</button>
+<button class="btn sec" id="raz" type="button">Tout réinitialiser</button>
+</div>
+<p id="msg" role="status" aria-live="polite"></p>
+<h3 style="margin:16px 0 0;font-size:17px">État actuel de cet appareil</h3>
+<div class="stats" id="etat" aria-label="État actuel des données"></div>
+<p class="nt" id="etat-note" style="margin:10px 0 0"></p>
+</div>
+</section>
+
+<section aria-labelledby="t-esp">
+<h2 id="t-esp">2. Les quatre espaces</h2>
+<div class="grid quatre">
+<article class="card esp"><div class="ic" aria-hidden="true">C</div><h3>Client</h3><p>Le particulier commande une course, une moto ou une livraison : prix et délai affichés avant de confirmer, suivi, reçu.</p><a class="btn" href="index.html">Ouvrir le client</a></article>
+<article class="card esp"><div class="ic" aria-hidden="true">L</div><h3>Livreur et chauffeur</h3><p>Le professionnel passe en ligne, reçoit des demandes avec son gain net, confirme la collecte et la livraison avec des codes, suit ses gains.</p><a class="btn" href="chauffeur.html">Ouvrir l'espace livreur</a></article>
+<article class="card esp"><div class="ic" aria-hidden="true">E</div><h3>Entreprise</h3><p>Le marchand ou l'entreprise crée et importe des livraisons, suit tout en direct, encaisse à la livraison et reçoit ses factures.</p><a class="btn" href="fournisseur.html">Ouvrir le portail entreprise</a></article>
+<article class="card esp"><div class="ic" aria-hidden="true">A</div><h3>Administration</h3><p>L'équipe 11Barré valide les comptes et les dossiers, affecte les commandes, contrôle l'argent et garde une trace de chaque décision.</p><a class="btn" href="admin.html">Ouvrir l'administration</a></article>
+</div>
+</section>
+
+<section aria-labelledby="t-parcours">
+<h2 id="t-parcours">3. Parcours conseillé en six étapes</h2>
+<p class="nt" style="margin-top:0">Ouvrez les pages dans le même navigateur : elles se parlent par le stockage local. Revenez ici à tout moment.</p>
+<ol class="steps">
+<li><div><b>Charger les données</b><p>Touchez « Charger un jeu de données de démonstration » plus haut. L'état se met à jour : entreprises, livreurs, livraisons, journal équilibré.</p><a class="lnk" href="#t-etat">Aller au bouton</a></div></li>
+<li><div><b>Ouvrir l'administration</b><p>Le tableau de bord montre les points à traiter : un compte entreprise et un dossier de livreur à valider, un versement, un reversement, une facture, une commande sans livreur et une alerte SOS. Essayez d'affecter la commande en attente.</p><a class="lnk" href="admin.html">Ouvrir l'administration</a></div></li>
+<li><div><b>Mettre un livreur en ligne</b><p>Dans l'espace livreur, le profil « Koffi Yao » est déjà validé : touchez « Passer en ligne ». Il verra aussi les commandes du portail entreprise.</p><a class="lnk" href="chauffeur.html">Ouvrir l'espace livreur</a></div></li>
+<li><div><b>Commander côté client</b><p>Choisissez une destination et commandez une course ou une livraison. Si aucun livreur n'est en ligne, une course de démonstration démarre toute seule, avec un chauffeur fictif.</p><a class="lnk" href="index.html">Ouvrir le client</a></div></li>
+<li><div><b>Accepter côté livreur</b><p>La demande arrive chez le livreur en ligne avec son gain net : acceptez, entrez le code de confirmation du client, terminez, puis encaissez. Le client voit tout en direct.</p><a class="lnk" href="chauffeur.html">Retourner à l'espace livreur</a></div></li>
+<li><div><b>Suivre côté entreprise</b><p>Le portail de « Boutique Awalé » (remise de contrat de 10 %) montre les livraisons en direct, les paiements à la livraison encaissés puis reversés, et les factures.</p><a class="lnk" href="fournisseur.html">Ouvrir le portail entreprise</a></div></li>
+</ol>
+</section>
+
+<section aria-labelledby="t-contenu">
+<h2 id="t-contenu">4. Ce que contient le jeu de données</h2>
+<div class="card">
+<ul class="chk">
+<li>Trois entreprises : deux validées (dont une avec remise de contrat de 10 %) et une en attente de validation.</li>
+<li>Quatre livreurs et chauffeurs : trois avec un dossier complet et validé (deux motos, un camion), un dossier en attente de contrôle.</li>
+<li>Seize livraisons à tous les stades : en recherche de livreur, affectées, en transit, livrées, annulée, échec de livraison, chacune avec son historique daté.</li>
+<li>Des paiements à la livraison encaissés, des versements de livreurs (un validé, un en attente), un reversement fait et un en attente, une facture émise et une payée.</li>
+<li>Une alerte SOS ouverte, un journal d'audit et un journal financier équilibré (les fonds des fournisseurs restent à part du revenu de 11Barré).</li>
+</ul>
+<p class="nt">Les données sont créées avec les règles du moteur de l'application (statuts, devis, journal comptable immuable), pas écrites à la main. « Tout réinitialiser » ne supprime que les données 11Barré de ce navigateur.</p>
+</div>
+</section>
+<footer class="nt">11Barré · maquette de démonstration · prix, paiements, chauffeurs et numéros fictifs.</footer>
+</main>
+</div>
+
+<div class="ov" id="cf" hidden><div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="cf-t" aria-describedby="cf-p" tabindex="-1">
+<h2 id="cf-t"></h2><p id="cf-p"></p>
+<div class="actions"><button class="btn sec" id="cf-non" type="button">Non, garder</button><button class="btn er" id="cf-oui" type="button">Oui</button></div></div></div>
+
+<script src="commun.js"></script>
+<script src="moteur.js"></script>
+<script>
+"use strict";
+/* Visite guidée : jeu de données de démonstration créé avec les API existantes (collections de commun.js, règles de moteur.js). */
+const PREFIXE="onzebarre_",DAY=86400000;
+const cles=()=>{try{return Object.keys(localStorage).filter(k=>k.startsWith(PREFIXE))}catch(e){return[]}};
+const reinit=()=>{cles().forEach(k=>{try{localStorage.removeItem(k)}catch(e){}})};
+const nbDonnees=()=>cles().filter(k=>!["onzebarre_pos","onzebarre_pay","onzebarre_rec","onzebarre_accueil_vu"].includes(k)).length;
+
+function charger(){
+  reinit();
+  const now=Date.now(),PLAN=M.PLAN_DEFAUT,ago=min=>now-min*60000,annee=new Date(now).getFullYear();
+  const ISO=d=>new Date(d).toISOString().slice(0,10),expire=ISO(now+365*DAY);
+  const acteur={nom:"Équipe de démonstration",role:"admin"},MOTIF="Jeu de données de démonstration";
+  /* --- Entreprises (même forme que l'inscription du portail) --- */
+  const point=(place,nom,adresse,tel)=>[{id:"p1",nom,place,adresse,tel,horaires:"8 h - 19 h",defaut:true}];
+  const orgs=[
+   {id:"Sdemo1",nom:"Boutique Awalé SARL",type:"fournisseur",rccm:"RCCM fictif 0001",tel:"0700000011",email:"contact@awale.exemple.ci",adresse:"Rue 12, Marcory Zone 4 (adresse fictive)",statut:"valide",remise:.10,cree_le:ago(60*24*20),points:point("Marcory Zone 4","Boutique Awalé Marcory","Rue 12, Marcory Zone 4 (fictive)","0700000011"),membres:[{id:"u1",nom:"Ama Diallo",role:"admin"},{id:"u2",nom:"Yves Kouamé",role:"operateur"}]},
+   {id:"Sdemo2",nom:"Pharmacie du Plateau",type:"entreprise",rccm:"RCCM fictif 0002",tel:"0700000012",email:"compta@pharmacie.exemple.ci",adresse:"Avenue 7, Plateau (adresse fictive)",statut:"valide",remise:0,cree_le:ago(60*24*12),points:point("Plateau","Pharmacie du Plateau","Avenue 7, Plateau (fictive)","0700000012"),membres:[{id:"u1",nom:"Marc Konan",role:"admin"}]},
+   {id:"Sdemo3",nom:"Atelier Cocody Couture",type:"fournisseur",rccm:"",tel:"0700000013",email:"atelier@couture.exemple.ci",adresse:"Rue des Jardins, Cocody Angré (adresse fictive)",statut:"en_verification",remise:0,cree_le:ago(90),points:point("Cocody Angré","Atelier Cocody","Rue des Jardins, Cocody (fictive)","0700000013"),membres:[{id:"u1",nom:"Fatou Sanogo",role:"admin"}]}];
+  orgs.forEach(o=>ORGS.ajouter(o));
+  /* --- Livreurs et chauffeurs : dossier = identité, permis, plaque, assurance ; capacité et position facultatives --- */
+  const pos=n=>{const l=lieu(n);return{n:l.n,la:l.la,lo:l.lo}};
+  const livreurs=[
+   {id:"Ldemo1",nom:"Koffi Yao",tel:"0700000021",type:"livreur",statut:"valide",cree_le:ago(60*24*30),dossier:{identite:"CI-DEMO-0001",permis:"P-DEMO-0001",plaque:"1234 AB 01",assurance_exp:expire,capacite_kg:10,capacite_m3:.08,position:pos("Cocody Angré")}},
+   {id:"Ldemo2",nom:"Awa Traoré",tel:"0700000022",type:"livreur",statut:"valide",cree_le:ago(60*24*25),dossier:{identite:"CI-DEMO-0002",permis:"P-DEMO-0002",plaque:"5821 HD 01",assurance_exp:expire,capacite_kg:10,capacite_m3:.08,position:pos("Plateau")}},
+   {id:"Ldemo3",nom:"Mamadou Diarra",tel:"0700000023",type:"chauffeur",statut:"valide",cree_le:ago(60*24*18),dossier:{identite:"CI-DEMO-0003",permis:"P-DEMO-0003",plaque:"7709 JC 01",assurance_exp:expire,capacite_kg:800,capacite_m3:5,position:pos("Marcory Zone 4")}},
+   {id:"Ldemo4",nom:"Issouf Bamba",tel:"0700000024",type:"livreur",statut:"en_verification",cree_le:ago(120),dossier:{identite:"CI-DEMO-0004",permis:"P-DEMO-0004",plaque:"3302 KB 01",assurance_exp:expire}}];
+  livreurs.forEach(l=>LIVREURS.ajouter(l));
+  const L={};livreurs.forEach(l=>L[l.id]=l);
+  const veh=l=>l.type==="livreur"?"Moto":"Camionnette";
+  /* --- Livraisons : même démarche que le portail (devis M.devis, catégorie M.choisirCategorie, statuts M.changerStatut) --- */
+  const SUITE={assigned:["assigned"],pickup:["assigned","courier_to_pickup"],transit:["assigned","courier_to_pickup","picked_up","in_transit"],delivered:["assigned","courier_to_pickup","picked_up","in_transit","arrived","delivered"],failed:["assigned","courier_to_pickup","picked_up","in_transit","failed_delivery"],ready:[],cancelled:["cancelled"]};
+  const NOTE={assigned:l=>"Acceptée par "+l.nom.split(" ")[0],courier_to_pickup:()=>"Prise en charge par le livreur",picked_up:()=>"Collecte confirmée (code du fournisseur)",in_transit:()=>"",arrived:()=>"",delivered:()=>"Livré : code du destinataire vérifié",failed_delivery:()=>"Destinataire injoignable après deux appels",cancelled:()=>"Annulée par le demandeur"};
+  const SPEC=[ /* [organisation, destination, poids kg, volume m3, vitesse, porte à porte, montant à encaisser, payeur du transport, étape, livreur, âge en minutes, destinataire] */
+   ["Sdemo1","Cocody Angré",1.2,0,"std",0,15000,"compte","delivered","Ldemo1",60*30,"Awa Koné"],
+   ["Sdemo1","Yopougon Siporex",2,0,"exp",0,8000,"dest","delivered","Ldemo2",60*26,"Yao Marc"],
+   ["Sdemo1","Treichville",.8,0,"std",0,0,"compte","delivered","Ldemo1",60*22,"Aya Bamba"],
+   ["Sdemo1","Koumassi",3,0,"std",1,0,"compte","delivered","Ldemo2",60*20,"Paul Tano"],
+   ["Sdemo2","Cocody Deux-Plateaux",.5,0,"exp",0,0,"compte","delivered","Ldemo1",60*18,"Clinique Les Palmiers"],
+   ["Sdemo2","Adjamé",5,0,"std",0,0,"compte","delivered","Ldemo2",60*15,"Dispensaire d'Adjamé"],
+   ["Sdemo2","Port-Bouët Aéroport",120,.5,"std",0,0,"compte","delivered","Ldemo3",60*14,"Centre de santé du port"],
+   ["Sdemo1","Abobo Gare",1.5,0,"std",0,12000,"compte","delivered","Ldemo1",60*10,"Nadège Ouattara"],
+   ["Sdemo2","Bingerville",60,.4,"std",0,0,"compte","transit","Ldemo3",75,"Clinique de Bingerville"],
+   ["Sdemo1","Plateau",2,0,"exp",0,20000,"compte","transit","Ldemo2",50,"Cabinet Diomandé"],
+   ["Sdemo1","Cocody Riviera Palmeraie",1,0,"std",0,0,"compte","assigned","Ldemo1",12,"Salimata Cissé"],
+   ["Sdemo2","Marcory Zone 4",4,0,"std",0,0,"compte","pickup","Ldemo2",18,"Pharmacie Marcory"],
+   ["Sdemo1","Anyama",2,0,"std",0,0,"compte","ready",null,25,"Kader Soro"],
+   ["Sdemo2","Yopougon Niangon",1,0,"std",0,0,"compte","ready",null,2,"Esther Aka"],
+   ["Sdemo1","Attécoubé",3,0,"std",0,0,"compte","cancelled",null,60*5,"Brice N'Guessan"],
+   ["Sdemo2","Dabou",8,0,"std",0,0,"compte","failed","Ldemo1",60*3,"Dispensaire de Dabou"]];
+  const livraisons=[],cat={lm:"Livraison à moto",ex:"Express Cargo",ca:"Camion"},VIT={exp:"Express",std:"Standard",grp:"Un peu plus long",diff:"Dans 2 heures"};
+  SPEC.forEach((s,i)=>{const [oid,dest,poids,vol,vit,porte,cod,payeur,etape,lid,age,nomDest]=s,org=orgs.find(o=>o.id===oid),pt=org.points[0],o0=lieu(pt.place),d=lieu(dest),t0=ago(age),u=org.membres[org.membres.length-1].nom;
+   const dk=Math.max(.8,km(o0,d)*1.35),ch=M.choisirCategorie(PLAN,{poids_kg:poids,volume_m3:vol}),devis=M.devis(PLAN,{cat:ch.cat,km:dk,vitesse:vit,porte:!!porte,remise:org.remise||0},t0),du=Math.max(4,Math.round(dk/(ch.mode==="moto"?30:20)*60)+3),n=i+1;
+   const o={id:"od"+(1000+n),ref:"11B-"+annee+"-"+String(n).padStart(5,"0"),refExt:"CMD-"+(500+n),org:oid,orgNom:org.nom,cree_par:u,cree_le:t0,mode:ch.mode,cat:ch.cat,catNom:cat[ch.cat],
+    de:{n:pt.nom,z:o0.z,la:o0.la,lo:o0.lo,adresse:pt.adresse,tel:pt.tel},a:{n:d.n,z:d.z,la:d.la,lo:d.lo,adresse:""},dest:{nom:nomDest,tel:"05000001"+String(10+n)},colis:{c:poids>20?"Cartons de matériel":"Colis",poids,volume:vol},
+    vitesse:vit,vitesseNom:VIT[vit],porte:!!porte,cod,payeurTransport:payeur,devis,km:+dk.toFixed(1),du,codeCollecte:String(1100+n*7).slice(0,4),codeLivraison:String(2200+n*11).slice(0,4),statut:"draft",evenements:[],chauffeur:null};
+   const avance=(vers,off)=>{const at=Math.min(now-30000,t0+off*60000);M.changerStatut(o,vers,vers==="cancelled"?u:(lid?L[lid].nom:u),NOTE[vers]?NOTE[vers](lid?L[lid]:null):"",at)};
+   M.changerStatut(o,"quoted",u,"Devis accepté",t0);M.changerStatut(o,"ready_for_assignment",u,"Commande confirmée (compte professionnel)",t0+30000);
+   let off=2;SUITE[etape].forEach(v=>{avance(v,off);off+=v==="in_transit"||v==="arrived"?8:3;if(v==="assigned"){const l=L[lid];o.chauffeur={id:l.id,nom:l.nom,veh:veh(l),plaque:l.dossier.plaque,note:4.9}}});
+   if(etape==="delivered"){o.livre_le=o.evenements[o.evenements.length-1].at;o.preuve={type:"code",verifie_le:o.livre_le,recepteur:nomDest}}
+   o.etape=etape;livraisons.push(o)});
+  /* --- Journal financier : clôture des livraisons livrées avec M.cloturer, comme l'espace livreur --- */
+  const J=M.nouveauLivre(),at=o=>o.livre_le||now;
+  livraisons.filter(o=>o.etape==="delivered").forEach(o=>{const cod=o.cod||0,dest=o.payeurTransport==="dest";
+   M.cloturer(J,{ref:o.ref,plan:PLAN,total:o.devis.total,paiement:cod>0?"cod":"compte",transport:dest?"collecte":"compte",produit:cod,fournisseur:o.org,client:o.org,livreur:o.chauffeur.id,at:at(o)});o.cloture=true});
+  /* Versement validé de Koffi (tout l'espèces détenu), puis un reversement exécuté à la boutique ; un versement d'Awa et un reversement restent en attente */
+  const esp=id=>{const e=M.solde(J,"especes:"+id);return e.debit-e.credit};
+  const vK=esp("Ldemo1");M.verser(J,{ref:"vsdemo1",livreur:"Ldemo1",montant:vK,mode:"wave",reference:"WAVE-DEMO-0001",at:ago(60*8)});
+  VERS.ajouter({id:"vsdemo1",livreur:"Ldemo1",nom:"Koffi Yao",m:vK,mode:"wave",ref:"WAVE-DEMO-0001",statut:"valide",valide_par:acteur.nom,at:ago(60*8)});
+  const vA=Math.min(5000,esp("Ldemo2"));VERS.ajouter({id:"vsdemo2",livreur:"Ldemo2",nom:"Awa Traoré",m:vA,mode:"orange",ref:"OM-DEMO-0002",statut:"attente",at:ago(35)});
+  M.reverserFournisseur(J,{ref:"rvdemo1",fournisseur:"Sdemo1",montant:10000,reference:"REV-DEMO1-wave",at:ago(60*6)});
+  REVERS.ajouter({id:"rvdemo1",org:"Sdemo1",m:10000,op:"wave",c:"0700000011",statut:"verse",ref:"REV-DEMO1",approbations:[],at:ago(60*7)});
+  REVERS.ajouter({id:"rvdemo2",org:"Sdemo1",m:12000,op:"wave",c:"0700000011",statut:"attente",approbations:[],at:ago(40)});
+  M.regler(J,{ref:"rgdemo1",livreur:"Ldemo1",montant:2000,reference:"OM-REGL-DEMO-1",at:ago(60*5)});
+  /* Factures : une émise (Boutique Awalé), une payée (Pharmacie) */
+  const fact=(num,oid,ids)=>{const os=livraisons.filter(o=>o.org===oid&&o.cloture&&o.payeurTransport==="compte"&&ids.includes(o.ref));const f=M.facture({numero:num,client:oid,clientNom:orgs.find(x=>x.id===oid).nom,periode:ISO(os[0].cree_le).slice(0,7),at:ago(60*9),echeance:now+15*DAY,lignes:os.map(o=>({ref:o.ref,libelle:o.ref+" · "+o.a.n+" ("+o.catNom+")",montant:o.devis.total}))});os.forEach(o=>{o.facture=num});return JSON.parse(JSON.stringify(f))};
+  const ref=n=>"11B-"+annee+"-"+String(n).padStart(5,"0");
+  const f1=fact("FAC-"+annee+"-0001","Sdemo1",[ref(1),ref(3),ref(4),ref(8)]),f2=fact("FAC-"+annee+"-0002","Sdemo2",[ref(5),ref(6),ref(7)]);
+  M.encaisserCreance(J,{ref:f2.numero,client:"Sdemo2",montant:f2.total,facture:f2.numero,reference:"WAVE-FAC-DEMO-2",at:ago(60*2)});f2.statut="payee";
+  if(!M.equilibre(J))throw new Error("Journal déséquilibré : jeu de données abandonné");
+  /* --- Écriture dans le stockage partagé --- */
+  const sans=livraisons.map(o=>{const c=Object.assign({},o);delete c.etape;return c});LIV.ecrire(sans);
+  LS.set("ledger",{tx:J.tx});LS.set("factures",[f1,f2]);LS.set("compteur",SPEC.length);LS.set("compteur_fac",2);
+  INCID.ajouter({id:"idemo1",type:"sos",livreur:"Ldemo2",nom:"Awa Traoré",commande:"od1010",statut:"ouvert",at:ago(8),note:""});
+  /* Journal d'audit : décisions de démonstration (ajout seul) */
+  auditer(acteur,"compte_valide","entreprise","Boutique Awalé SARL",{statut:"en_verification",remise:0},{statut:"valide",remise:.1},MOTIF);
+  auditer(acteur,"compte_valide","entreprise","Pharmacie du Plateau",{statut:"en_verification",remise:0},{statut:"valide",remise:0},MOTIF);
+  ["Koffi Yao","Awa Traoré","Mamadou Diarra"].forEach(n=>auditer(acteur,"livreur_valide","livreur",n,{statut:"en_verification"},{statut:"valide"},MOTIF));
+  auditer(acteur,"versement_valide","versement","vsdemo1",{statut:"attente"},{statut:"valide",montant:vK,reference:"WAVE-DEMO-0001"},"");
+  auditer(acteur,"reversement_execute","fournisseur","Boutique Awalé SARL",null,{montant:10000,reference:"REV-DEMO1"},"");
+  auditer(acteur,"facture_payee","facture",f2.numero,{statut:"emise"},{statut:"payee",reference:"WAVE-FAC-DEMO-2"},"");
+  /* Pour que chaque espace s'ouvre sur un compte validé : livreur Koffi, portail Boutique Awalé, historique client */
+  LS.set("profil",{id:"Ldemo1",nom:"Koffi Yao",tel:"0700000021",type:"livreur"});
+  LS.set("ch_hist",livraisons.filter(o=>o.etape==="delivered"&&o.chauffeur.id==="Ldemo1").map(o=>({id:o.id,de:o.de.n,a:o.a.n,prix:o.devis.total,net:M.repartition(PLAN,o.devis.total).livreur,cod:o.cod||0,ep:o.payeurTransport==="dest",s:o.catNom,d:new Date(o.livre_le).toLocaleDateString("fr-FR")})));
+  LS.set("org_id","Sdemo1");LS.set("p_user","u1");
+  const h=(id,de,a,p,s,k,drv,minutes,lignes)=>({id:String(id),ts:ago(minutes),de,a,p,s,d:new Date(ago(minutes)).toLocaleDateString("fr-FR"),n:5,tip:0,tags:["Ponctuel"],drv,pay:"Espèces",payId:"cash",lignes,km:k,liv:false,dest:""});
+  LS.set("hist",[h(1731400000001,"Cocody Angré","Plateau",2950,"Courses Confort",11.8,["Koffi A.","Toyota Yaris","1234 GH 01"],60*26,[{libelle:"Frais de base",montant:700},{libelle:"Distance 11.8 km",montant:2242},{libelle:"Arrondi",montant:8}]),h(1731300000002,"Plateau","Marcory Zone 4",2300,"Courses Éco",7.1,["Awa T.","Hyundai Accent","5821 HD 01"],60*50,[{libelle:"Frais de base",montant:500},{libelle:"Distance 7.1 km",montant:1065},{libelle:"Arrondi",montant:735}])]);
+  return{orgs:orgs.length,livreurs:livreurs.length,livraisons:livraisons.length,ecritures:J.tx.length};
+}
+
+/* --- Affichage de l'état courant (lu dans le stockage, donc fidèle aux autres pages) --- */
+function etat(){
+  const orgs=ORGS.liste(),liv=LIVREURS.liste(),cmd=LIV.lire(),J=M.chargerLivre(LS.get("ledger",null)),eq=M.equilibre(J),caisse=-M.solde(J,"caisse").net;
+  const val=orgs.filter(o=>o.statut==="valide").length,lv=liv.filter(l=>l.statut==="valide").length,liv2=cmd.filter(o=>o.statut==="delivered").length;
+  const k=(b,s)=>`<div><b>${b}</b><span>${s}</span></div>`;
+  $("#etat").innerHTML=k(orgs.length,"entreprise"+(orgs.length>1?"s":"")+" ("+val+" validée"+(val>1?"s":"")+")")+k(liv.length,"livreur"+(liv.length>1?"s":"")+" et chauffeur"+(liv.length>1?"s":"")+" ("+lv+" validé"+(lv>1?"s":"")+")")+k(cmd.length,"livraison"+(cmd.length>1?"s":"")+" ("+liv2+" livrée"+(liv2>1?"s":"")+")")+k(J.tx.length,"écriture"+(J.tx.length>1?"s":"")+" au journal")+k(F(caisse),"en caisse (solde du journal)")+k(F(M.fondsTiers(J)),"dus aux fournisseurs (fonds de tiers)")+k(`<span class="${eq?"ok":"ko"}">${J.tx.length?(eq?"Équilibré":"Déséquilibré"):"Vide"}</span>`,"journal : débits et crédits");
+  $("#etat-note").textContent=orgs.length||liv.length||cmd.length||J.tx.length?"Revenu propre de 11Barré (commissions) : "+F(M.revenuPropre(J))+". Le reste de la caisse appartient aux fournisseurs et aux livreurs.":"Aucune donnée pour le moment : chargez le jeu de démonstration pour commencer.";
+  $("#raz").disabled=cles().length===0;
+}
+const msg=(t,ko)=>{const m=$("#msg");m.textContent=t;m.className=ko?"ko":"ok"};
+/* --- Boîte de confirmation --- */
+let suite=null,avant=null;
+function confirmer(titre,texte,oui,fn,non){avant=document.activeElement;$("#cf-t").textContent=titre;$("#cf-p").textContent=texte;$("#cf-oui").textContent=oui;$("#cf-non").textContent=non||"Non, garder";suite=fn;$("#cf").hidden=false;$("#cf-oui").focus()}
+function fermer(){$("#cf").hidden=true;suite=null;if(avant&&avant.focus)avant.focus()}
+$("#cf-non").onclick=fermer;$("#cf-oui").onclick=()=>{const f=suite;fermer();if(f)f()};
+document.addEventListener("keydown",e=>{if($("#cf").hidden)return;if(e.key==="Escape")fermer();else if(e.key==="Tab"){const b=[$("#cf-non"),$("#cf-oui")],i=b.indexOf(document.activeElement);e.preventDefault();b[(i+(e.shiftKey?-1:1)+2)%2].focus()}});
+function faireCharger(){try{const r=charger();etat();msg("Jeu de données chargé : "+r.orgs+" entreprises, "+r.livreurs+" livreurs, "+r.livraisons+" livraisons, "+r.ecritures+" écritures au journal (équilibré). Passez à l'étape 2.")}catch(e){etat();msg("Chargement impossible : "+e.message,true)}}
+$("#charger").onclick=()=>{if(nbDonnees()>0)confirmer("Remplacer les données actuelles ?","Des données 11Barré existent déjà dans ce navigateur : elles seront effacées et remplacées par le jeu de démonstration.","Oui, remplacer",faireCharger,"Non, annuler");else faireCharger()};
+$("#raz").onclick=()=>confirmer("Tout réinitialiser ?","Toutes les données 11Barré de ce navigateur seront supprimées (entreprises, livreurs, livraisons, journal, historique du client). Rien d'autre n'est touché.","Oui, tout réinitialiser",()=>{reinit();etat();msg("Données réinitialisées : cet appareil est vide.")},"Non, garder");
+window.addEventListener("storage",etat);
+if("serviceWorker"in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(()=>{});
+etat();
+</script>
+</body>
+</html>

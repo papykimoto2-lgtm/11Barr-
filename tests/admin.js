@@ -9,6 +9,7 @@ const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:11
 const mk=async(u,vp)=>{const p=await ctx.newPage();if(vp)await p.setViewportSize(vp);p.on("pageerror",e=>errs.push(u+": "+e.message));await p.goto(base+"/"+u);return p};
 const pa=await mk("admin.html"),pf=await mk("fournisseur.html"),pd=await mk("chauffeur.html",{width:390,height:800});
 const toast=async p=>(await p.$$eval("#toast",e=>e.map(n=>n.textContent).join(" | ")).catch(()=>""))||"";
+const confirmer=()=>pa.click('[data-a=confirmok]');
 const txt=async(p,s)=>(await p.textContent(s||"#app"))||"";
 const tab=async x=>{await pa.click('[data-a=tab][data-t='+x+']')};
 const qui=async id=>{await pa.selectOption('[data-user]',id)};
@@ -27,7 +28,7 @@ await attendre(pf,"#app","Joindre le RCCM");t("le fournisseur voit le motif du c
 await pf.click('[data-a=renvoyer]');await pa.waitForFunction(()=>ORGS.liste()[0].statut==="en_verification");
 await pa.click('tr.k');await pa.fill('[data-rem]','5');await pa.click('[data-a=orgstatut][data-v=valide]');await attendre(pf,"#app","Tableau de bord");
 t("compte validé avec remise de contrat de 5 %",(await pa.evaluate(()=>ORGS.liste()[0].remise))===0.05&&(await txt(pf,"main")).includes("−5 %"));
-await pa.click('tr.k');await pa.fill('textarea[data-m]','Impayés');await pa.click('[data-a=orgstatut][data-v=suspendu]');await attendre(pf,"#app","suspendu");t("compte suspendu : le portail est bloqué avec le motif",(await txt(pf)).includes("Impayés")&&!(await pf.$('[data-a=tab]')));
+await pa.click('tr.k');await pa.fill('textarea[data-m]','Impayés');await pa.click('[data-a=orgstatut][data-v=suspendu]');await confirmer();await attendre(pf,"#app","suspendu");t("compte suspendu : le portail est bloqué avec le motif",(await txt(pf)).includes("Impayés")&&!(await pf.$('[data-a=tab]')));
 await pa.click('tr.k');await pa.click('[data-a=orgstatut][data-v=valide]');await attendre(pf,"#app","Tableau de bord");t("compte réactivé",true);
 const au=await pa.evaluate(()=>AUDIT.liste());const c1=au.find(x=>x.action==="compte_complement");
 t("audit : action, auteur, motif et valeurs avant/après enregistrés",!!c1&&c1.acteur==="Direction"&&c1.motif==="Joindre le RCCM"&&c1.avant.statut==="en_verification"&&c1.apres.statut==="complement"&&au.some(x=>x.action==="compte_suspendu"),c1);
@@ -40,7 +41,7 @@ await tab("livreurs");await pa.waitForSelector('tr.k');await pa.click('tr.k');
 await pa.fill('textarea[data-m]','Pièce illisible');await pa.click('[data-a=livstatut][data-v=refuse]');await pd.waitForFunction(()=>document.querySelector("#app").textContent.includes("Pièce illisible"),null,{timeout:4000});t("dossier refusé : le livreur voit le motif et ne peut pas passer en ligne",true);
 await pa.evaluate(()=>LIVREURS.maj(LIVREURS.liste()[0].id,l=>{l.statut="en_verification"}));await pa.click('[data-a=tab][data-t=livreurs]');await pa.click('tr.k');await pa.click('[data-a=livstatut][data-v=valide]');
 await pd.click('[data-a=ligne]');t("dossier validé : le livreur passe en ligne",(await txt(pd,".st")).includes("En ligne"));
-await pa.click('tr.k');await pa.fill('textarea[data-m]','Contrôle routier');await pa.click('[data-a=livstatut][data-v=suspendu]');
+await pa.click('tr.k');await pa.fill('textarea[data-m]','Contrôle routier');await pa.click('[data-a=livstatut][data-v=suspendu]');await confirmer();
 await pd.waitForFunction(()=>document.querySelector(".st").textContent.includes("Hors ligne"),null,{timeout:4000});t("suspension : le livreur est mis hors ligne immédiatement",(await toast(pd)).includes("plus actif")||true);
 await pa.click('tr.k');await pa.click('[data-a=livstatut][data-v=valide]');await pd.click('[data-a=ligne]');t("livreur réactivé et de nouveau en ligne",(await txt(pd,".st")).includes("En ligne"));
 /* ===== commandes : affectation manuelle, réaffectation, annulation ===== */
@@ -61,7 +62,7 @@ await pd.waitForFunction(()=>D.course&&D.course.src==="portail",null,{timeout:60
 await pa.fill('textarea[data-m]','Livreur en panne');await pa.click('[data-a=reaffecter]');
 await pd.waitForFunction(()=>D.course===null,null,{timeout:6000});t("réaffectation : la course disparaît chez le livreur, la commande repart en recherche",(await pa.evaluate(()=>LIV.lire()[0].statut))==="ready_for_assignment");
 await pd.evaluate(()=>{D.ligne=false;LS.set("chauffeur_ligne",0)});
-await pa.fill('textarea[data-m]','Demande du client');await pa.click('[data-a=annulercmd]');
+await pa.fill('textarea[data-m]','Demande du client');await pa.click('[data-a=annulercmd]');await confirmer();
 await pf.click('[data-a=tab][data-t=livraisons]');await attendre(pf,"main","Annulé");t("annulation par l'administration visible chez le fournisseur",true);
 const ac=(await pa.evaluate(()=>AUDIT.liste())).map(x=>x.action);t("audit : affectation, réaffectation et annulation tracées",["affectation_manuelle","reaffectation","annulation"].every(x=>ac.includes(x)),ac);
 /* ===== finance : amorçage du journal puis validations ===== */
@@ -78,14 +79,14 @@ await qui("a3");await tab("finance");await pa.click('[data-a=approuver][data-k=r
 await pa.click('[data-a=approuver][data-k=rev]');t("le même approbateur ne peut pas approuver deux fois",(await toast(pa)).includes("déjà approuvé"));
 await qui("a1");await tab("finance");await pa.click('[data-a=approuver][data-k=rev]');t("second approbateur distinct : prêt à exécuter",!!(await pa.$('[data-a=executer][data-k=rev]')));
 await pa.click('[data-a=executer][data-k=rev]');t("exécution refusée tant que la caisse ne contient pas les fonds remis",(await toast(pa)).includes("pas encore remis"));
-await pa.evaluate(({l})=>{const L=ledger();M.verser(L,{ref:"SEED-V2",livreur:l,montant:295000});sauveL(L)},ids);await tab("tableau");await tab("finance");await pa.click('[data-a=executer][data-k=rev]');
+await pa.evaluate(({l})=>{const L=ledger();M.verser(L,{ref:"SEED-V2",livreur:l,montant:295000});sauveL(L)},ids);await tab("tableau");await tab("finance");await pa.click('[data-a=executer][data-k=rev]');await confirmer();
 t("reversement exécuté après remise des fonds : 50 000 restent dus au fournisseur",(await pa.evaluate(()=>M.fondsTiers(ledger())))===50000&&(await pa.evaluate(()=>REVERS.get("rvSEED").statut))==="verse");
 /* règlement d'un livreur : seuil et double approbation */
 await pa.click('[data-a=regler]');await pa.fill('[data-regm]','10000');await pa.fill('[data-regr]','OM1');await pa.click('[data-a=reglerok]');t("règlement : référence trop courte refusée",(await toast(pa)).includes("référence"));
-await pa.fill('[data-regr]','OM-1234');await pa.click('[data-a=reglerok]');t("règlement de 10 000 (sous le seuil) exécuté directement",(await pa.evaluate((l)=>M.solde(ledger(),"dette_livreur:"+l).net,ids.l))===1700+340000-10000);
-await pa.click('[data-a=regler]');await pa.fill('[data-regm]','150000');await pa.fill('[data-regr]','OM-998877');await pa.click('[data-a=reglerok]');
+await pa.fill('[data-regr]','OM-1234');await pa.click('[data-a=reglerok]');await confirmer();t("règlement de 10 000 (sous le seuil) exécuté directement",(await pa.evaluate((l)=>M.solde(ledger(),"dette_livreur:"+l).net,ids.l))===1700+340000-10000);
+await pa.click('[data-a=regler]');await pa.fill('[data-regm]','150000');await pa.fill('[data-regr]','OM-998877');await pa.click('[data-a=reglerok]');await confirmer();
 t("règlement de 150 000 : demande créée, en attente de double approbation",(await pa.evaluate(()=>REGL.liste().length))===1&&(await toast(pa)).includes("double"));
-await qui("a3");await tab("finance");await pa.click('[data-a=approuver][data-k=reg]');await qui("a1");await tab("finance");await pa.click('[data-a=approuver][data-k=reg]');await pa.click('[data-a=executer][data-k=reg]');
+await qui("a3");await tab("finance");await pa.click('[data-a=approuver][data-k=reg]');await qui("a1");await tab("finance");await pa.click('[data-a=approuver][data-k=reg]');await pa.click('[data-a=executer][data-k=reg]');await confirmer();
 t("règlement exécuté après deux approbations distinctes",(await pa.evaluate((l)=>M.solde(ledger(),"dette_livreur:"+l).net,ids.l))===1700+340000-10000-150000);
 /* factures et rapprochement */
 await pa.evaluate(({o})=>{const f=M.facture({numero:"FAC-SEED-1",client:o,clientNom:"Boutique Test SARL",periode:"2026-11",lignes:[{ref:"x",libelle:"Livraison x",montant:2000}]});const l=LS.get("factures",[]);l.push(JSON.parse(JSON.stringify(f)));LS.set("factures",l)},ids);await tab("tableau");await tab("finance");
@@ -99,7 +100,7 @@ await qui("a3");t("le comptable n'a pas accès aux tarifs",!(await pa.$('[data-a
 const p0=await pf.evaluate(()=>M.devis(PLAN,{cat:"lm",km:5}).total);
 await pa.fill('[data-pl="categories.lm.base"]','400');await pa.click('[data-a=enregistrerplan]');t("nouvelle grille sans motif refusée",(await toast(pa)).includes("motif"));
 await pa.fill('[data-pl="commission.valeur"]','0.6');await pa.fill('[data-pm]','Test');await pa.click('[data-a=enregistrerplan]');t("commission supérieure à 50 % refusée",(await toast(pa)).includes("50 %"));
-await pa.fill('[data-pl="commission.valeur"]','0.12');await pa.fill('[data-pm]','Nouvelle grille négociée');await pa.click('[data-a=enregistrerplan]');
+await pa.fill('[data-pl="commission.valeur"]','0.12');await pa.fill('[data-pm]','Nouvelle grille négociée');await pa.click('[data-a=enregistrerplan]');await confirmer();
 const pl=await pa.evaluate(()=>({v:LS.get("plan",null),h:LS.get("plans",[])}));t("nouvelle version du plan : v2, base 400, commission 12 %, ancienne version archivée",pl.v.version===2&&pl.v.categories.lm.base===400&&pl.v.commission.valeur===0.12&&pl.h.length===1&&pl.h[0].version===1&&pl.v.demonstration===false,pl.v&&pl.v.version);
 await pf.reload();const p1=await pf.evaluate(()=>M.devis(PLAN,{cat:"lm",km:5}).total);t("le portail applique le nouveau tarif au prochain chargement",p1>p0,[p0,p1]);
 await tab("audit");t("audit : modification du plan avec auteur, motif et valeurs avant/après",(await txt(pa)).includes("plan_tarifaire")&&(await txt(pa)).includes("Nouvelle grille négociée"));
@@ -110,6 +111,6 @@ await qui("a4");await tab("incidents");await pa.click('[data-a=prendre]');await 
 await pa.fill('input[data-m]','Livreur joint, tout va bien');await pa.click('[data-a=clore]');t("incident clôturé par le support avec sa résolution",(await pa.evaluate(()=>INCID.liste()[0].statut))==="clos"&&(await txt(pa)).includes("tout va bien"));
 /* ===== équipe ===== */
 await qui("a1");await tab("equipe");await pa.fill('[data-nm=nom]','Awa Contrôleur');await pa.selectOption('[data-nm=role]','support');await pa.click('[data-a=ajouter]');t("membre ajouté à l'équipe",(await txt(pa)).includes("Awa Contrôleur"));
-await pa.click('[data-a=retirer] >> nth=-1');t("membre retiré, historique conservé dans l'audit",!(await txt(pa)).includes("Awa Contrôleur")&&(await pa.evaluate(()=>AUDIT.liste().some(x=>x.action==="membre_retire"))));
+await pa.click('[data-a=retirer] >> nth=-1');await confirmer();t("membre retiré, historique conservé dans l'audit",!(await txt(pa)).includes("Awa Contrôleur")&&(await pa.evaluate(()=>AUDIT.liste().some(x=>x.action==="membre_retire"))));
 t("aucune erreur JavaScript",errs.length===0,errs);
 console.log(ok+" PASS, "+ko+" FAIL");await b.close();srv.close();process.exit(ko?1:0)})().catch(e=>{console.log("EXC",e.message.split("\n").slice(0,4).join(" | "));process.exit(1)});

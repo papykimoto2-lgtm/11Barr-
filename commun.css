@@ -74,3 +74,57 @@ label.l{display:block;font-weight:700;margin:12px 0 0}
 .hide{display:none!important}
 .nt{font-size:13px;color:var(--mu)}
 .eb{background:var(--soft);border-radius:12px;padding:10px 12px;font-size:14px;margin:8px 0}
+
+/* ===== Ajouts pour l'application client (index.html, <body class="client">) : purement additifs, sans effet sur chauffeur.html ===== */
+.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.client{--er-t:#b3261e;--focus:#0d1b2a}
+@media (prefers-color-scheme:dark){.client{--er-t:#ff9a90;--focus:#ffc21a}}
+.client :focus{outline:none}
+.client :focus-visible{outline:3px solid var(--focus);outline-offset:2px;box-shadow:0 0 0 5px var(--card)}
+.client .fld:focus,.client .full input:focus{outline:3px solid var(--focus);outline-offset:1px}
+.client [tabindex="-1"]:focus{outline:none;box-shadow:none}
+.client .tab{min-height:44px}
+.client .ib,.client .mini,.client .sos{flex:none}
+.client .top .pos{min-width:0}
+.client .stars button{min-width:44px;min-height:44px;color:var(--mu);opacity:.55}
+.client .stars button.on{color:var(--acc);opacity:1}
+.client .sw input{top:-6px;bottom:-6px;height:44px;width:100%}
+.client .sw{margin:6px 0}
+.client .hl{display:flex;justify-content:space-between;gap:12px;padding:6px 0}
+.client a.opt,.client a.btn{text-decoration:none;color:inherit}
+.client a.btn{color:var(--accink)}
+.client a.btn.sec2{color:var(--ink)}
+.client .cta .btn{min-height:52px}
+.client .btn.er{color:#fff}
+.client .opt[aria-checked="true"] .dot{border-color:var(--ink);background:var(--ink)}
+.client .opt[aria-checked="true"] .dot:after{content:"";width:8px;height:8px;border-radius:50%;background:var(--acc)}
+.errm{color:var(--er-t);font-weight:700;background:var(--soft);border-left:4px solid var(--er);border-radius:10px;padding:10px 12px;margin:10px 0}
+.spin{display:inline-block;width:1em;height:1em;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-.15em}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loc{display:inline-flex;align-items:center;gap:8px;min-height:44px;border:1.5px solid var(--line);background:var(--card);border-radius:99px;padding:6px 16px;font-weight:700;margin-top:12px}
+.loc[disabled]{opacity:.7}
+.wel{background:var(--card);border-radius:22px;padding:16px;margin-top:14px;box-shadow:0 1px 0 var(--line);border:2px solid var(--acc)}
+.wel h2{margin:2px 0 6px;font-size:21px}.wel p{margin:0 0 10px}
+.wel .dots{display:flex;gap:6px;margin:6px 0 10px}.wel .dots i{width:9px;height:9px;border-radius:50%;background:var(--line)}.wel .dots i.on{background:var(--ink)}
+.banner{background:var(--soft);border-radius:12px;padding:10px 12px;font-size:14px;margin:10px 0;font-weight:600}
+.dispo{margin:6px 2px 0;font-size:13px;color:var(--mu)}
+.tag{display:inline-flex;align-items:center;min-height:44px;border:2px solid var(--line);background:var(--card);border-radius:99px;padding:6px 14px;font-weight:700;margin:0 6px 8px 0}
+.tag[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap}
+.recu{border:2px dashed var(--line);border-radius:16px;padding:14px;background:var(--card)}
+.recu .tot{font-size:20px;border-top:2px solid var(--ink);margin-top:6px;padding-top:8px}
+.recu-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cta.wrap{flex-wrap:wrap}.cta.wrap .btn{flex:1 1 140px}
+@media (prefers-reduced-motion:no-preference){.ov{animation:fd .18s ease-out}.ov .sheet{animation:up .22s ease-out}@keyframes fd{from{opacity:0}}@keyframes up{from{transform:translateY(24px)}}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:2s}.sw i,.sw i:after{transition:none}}
+@media print{
+ .client{background:#fff;color:#000}
+ html,body{height:auto;overflow:visible}
+ .client #app{position:static;height:auto;max-width:none;overflow:visible;background:#fff}
+ .client #app>*:not(.ov),.client .rate-ov,.client .noprint,.client #toast{display:none!important}
+ .client .ov{position:static;background:none;display:block}
+ .client .ov .sheet{max-height:none;box-shadow:none;padding:0;border-radius:0}
+ .client .ov .sheet:before{display:none}
+ .client .recu{border:1px solid #000}
+}
+.client .pos{flex-wrap:wrap;font-size:20px}.client .pos small{flex-basis:100%}
