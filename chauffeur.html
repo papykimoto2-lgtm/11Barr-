@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffc21a">
+<link rel="manifest" href="manifest-chauffeur.webmanifest">
+<link rel="icon" type="image/png" href="icons/chauffeur-192.png">
+<link rel="apple-touch-icon" href="icons/chauffeur-apple-180.png">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="11Barré Pro">
+<title>11Barré Pro — Chauffeurs et livreurs</title>
+<link rel="stylesheet" href="commun.css">
+<style>
+.nav{display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:max(6px,env(safe-area-inset-bottom));flex:none}
+.nav button{flex:1;border:0;background:none;padding:10px 4px;font-weight:700;color:var(--mu);font-size:13px}.nav button.on{color:var(--ink)}.nav b{display:block;font-size:20px;line-height:1.2}
+.page{flex:1;overflow:auto;padding:max(14px,env(safe-area-inset-top)) 18px 18px}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}.kpi>div{background:var(--card);border-radius:16px;padding:12px;box-shadow:0 1px 0 var(--line)}.kpi b{display:block;font-size:22px}.kpi span{color:var(--mu);font-size:13px}
+.kpi.k3{grid-template-columns:1fr 1fr 1fr}.kpi.k3 b{font-size:18px}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:var(--acc)}
+.st{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:4px 12px;font-weight:800;font-size:13px;background:var(--soft)}.st.on{background:var(--ok);color:#fff}
+.go{display:flex;gap:10px;margin-top:8px}.go .btn{padding:14px}
+.lnk{flex:1;text-align:center;text-decoration:none;display:block;border-radius:16px;padding:14px;font-weight:800;background:var(--soft);color:var(--ink)}
+.big{font-size:34px;font-weight:900;letter-spacing:-.5px}
+.tt{position:absolute;left:14px;top:max(14px,env(safe-area-inset-top));z-index:3}
+input.cd{font-size:30px;font-weight:900;letter-spacing:.4em;text-align:center}
+.hl{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.hl small{display:block;color:var(--mu)}
+.ok{color:var(--ok)}.ko{color:var(--er)}
+</style>
+</head>
+<body>
+<div id="app" aria-live="polite"></div>
+<script src="commun.js"></script>
+<script>
+"use strict";
+/* 11Barré Pro — maquette de l'espace chauffeur et livreur.
+   Données de démonstration. Si l'application client est ouverte sur le même appareil, ses commandes arrivent ici en direct
+   (stockage local partagé) ; sinon, le bouton « Simuler une demande » en génère. Aucun serveur, aucun vrai paiement. */
+const COMM=.15,DELAI=30;
+const TYPES={chauffeur:{nom:"Chauffeur",veh:"Berline",tabs:["courses","cargo"],d:"Courses de personnes et transport de marchandises en voiture ou camionnette"},livreur:{nom:"Livreur à moto",veh:"Moto",tabs:["moto","livraison"],d:"Moto-taxi et livraison de colis"}};
+const TAR={courses:[700,190,1300,"Confort","car",0],moto:[300,100,500,"Moto-taxi","moto",0],livraison:[300,80,400,"Livraison à moto","moto",1],cargo:[2500,300,4200,"Express Cargo","van",1]}; /* mêmes valeurs que la grille de l'application client */
+const PAYL={cash:"Espèces",orange:"Orange Money",wave:"Wave",mtn:"MTN MoMo"};
+const D={p:LS.get("profil",null),ligne:false,offre:null,course:null,tab:"accueil",hist:LS.get("ch_hist",[]),vers:LS.get("ch_vers",[]),sheet:null,f:{nom:"",tel:"",type:"chauffeur",code:"",ok:false,vm:"",vmode:"cash",vref:""}};
+const REFUSEES=new Set(),AUJ=()=>new Date().toLocaleDateString("fr-FR");
+const net=o=>Math.round(o.prix*(1-COMM)),cod=o=>o.colis?+o.colis.cod||0:0;
+const encPrix=o=>o.pay==="cash"||(o.colis&&o.colis.payeur==="dest"),aEnc=o=>(encPrix(o)?o.prix:0)+cod(o);
+const plaque=()=>String(1000+hash(D.p.nom)%9000)+" GH 01";
+const masque=t=>{const d=String(t||"").replace(/\D/g,"");return d.length>=8?d.slice(0,2)+" •• •• •• "+d.slice(-2):"numéro masqué"};
+const commande=()=>LS.get("commande",null),majCmd=(o,x)=>{if(!o.real)return;const c=commande();if(c&&c.id===o.id)LS.set("commande",Object.assign(c,x))};
+const match=o=>D.p&&TYPES[D.p.type].tabs.includes(o.tab);
+function offreSim(){const tabs=TYPES[D.p.type].tabs,tab=tabs[Math.floor(Math.random()*tabs.length)],L=LIEUX.filter(l=>l.n!=="Ma position (démo)"),a=L[Math.floor(Math.random()*L.length)];let b;do{b=L[Math.floor(Math.random()*L.length)]}while(b===a);
+ const d=Math.max(.8,km(a,b)*1.35),t=TAR[tab],liv=!!t[5],prix=Math.max(t[2],r50(t[0]+t[1]*d)),pay=["cash","cash","wave","orange"][Math.floor(Math.random()*4)],avecCod=liv&&tab==="livraison"&&Math.random()<.4;
+ return{id:"s"+Date.now(),real:false,tab,k:t[4],cat:t[3],de:a,a:b,prix,pay,payLib:PAYL[pay],km:+d.toFixed(1),du:Math.max(4,Math.round(d/(tab==="cargo"?20:30)*60)+3),ap:2+Math.floor(Math.random()*7),code:String(1000+Math.floor(Math.random()*9000)),liv,colis:liv?{n:"Awa K.",t:"0707070707",c:avecCod?"Vêtements":"Documents",cod:avecCod?15000:0,payeur:"exp",vit:"Standard"}:null}}
+/* Rendu */
+const bar=()=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="logo" style="font-size:20px"><i>11</i>Barré <small style="font-size:12px;font-weight:800;color:var(--mu)">Pro</small></span><span class="st ${D.ligne?"on":""}">${D.ligne?"● En ligne":"Hors ligne"}</span></div>`;
+function loginV(){const f=D.f;return`<div class="page"><span class="logo"><i>11</i>Barré <small style="font-size:14px;font-weight:800;color:var(--mu)">Pro</small></span><h1 style="font-size:26px;margin:18px 0 4px">Gagnez de l'argent avec 11Barré</h1><p class="nt">Chauffeur ou livreur : recevez des demandes, suivez vos gains.</p>
+<div class="sec">Je suis</div>${Object.entries(TYPES).map(([k,t])=>`<button class="opt ${f.type===k?"on":""}" data-a="type" data-t="${k}"><span class="dot"></span><span class="t"><b>${t.nom}</b><small>${t.d}</small></span></button>`).join("")}
+<label class="l">Nom et prénom<input class="fld" data-k="nom" value="${esc(f.nom)}" maxlength="40" autocomplete="off"></label><label class="l">Téléphone<input class="fld" data-k="tel" inputmode="tel" value="${esc(f.tel)}" maxlength="20" autocomplete="off"></label>
+<div class="eb">Maquette : aucune vérification d'identité. La version réelle demandera pièce d'identité, permis et papiers du véhicule.</div>
+<div class="cta"><button class="btn" data-a="entrer">Continuer</button></div><p class="nt" style="text-align:center"><a href="index.html" style="color:inherit">Espace client</a></p></div>`}
+function carte(){const el=$("#map");if(!el)return;W=el.clientWidth||360;H=el.clientHeight||300;const c=D.course;
+ if(!c){el.innerHTML=`<svg viewBox="0 0 ${W} ${H}">${fond()}<circle cx="${W/2}" cy="${H/2}" r="22" fill="#ffc21a" opacity=".35"/><circle cx="${W/2}" cy="${H/2}" r="9" fill="#0d1b2a" stroke="#fff" stroke-width="3"/></svg>`;return}
+ const p=proj(c.de,c.a),A=p(c.de),B=p(c.a),pts=[A,[B[0],A[1]],B],route=pts.map((q,i)=>(i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1)).join(" "),f=avance();let m;
+ if(c.step==="approche")m=along([[A[0]-70,A[1]-55],[A[0]-70,A[1]],A],f);else if(c.step==="cours"||c.step==="fin")m=along(pts,c.step==="fin"?1:f);else m={x:A[0],y:A[1],ang:0};
+ const car=`<g transform="translate(${m.x.toFixed(1)} ${m.y.toFixed(1)}) rotate(${(m.ang+90).toFixed(0)})"><rect x="-8" y="-14" width="16" height="28" rx="6" fill="#0d1b2a" stroke="#fff" stroke-width="2"/><rect x="-5" y="-6" width="10" height="7" rx="2" fill="#ffc21a"/></g>`;
+ el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Itinéraire de ${esc(c.de.n)} à ${esc(c.a.n)}">${fond()}<path d="${route}" stroke="#fff" stroke-width="11" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="${route}" stroke="var(--route)" stroke-width="6" fill="none" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${A[0]}" cy="${A[1]}" r="9" fill="#fff" stroke="#0d1b2a" stroke-width="4"/><circle cx="${B[0]}" cy="${B[1]}" r="9" fill="#fff" stroke="#ff5a36" stroke-width="4"/>${car}</svg>`}
+const avance=()=>{const c=D.course;if(!c)return 0;const n=Date.now();return c.step==="approche"?Math.min(.95,(n-c.ta)/30000):c.step==="cours"?Math.min(.95,(n-c.tc)/40000):1};
+const jour=()=>D.hist.filter(h=>h.d===AUJ());
+const sjour=l=>({n:l.length,net:l.reduce((t,h)=>t+h.net,0),comm:l.reduce((t,h)=>t+h.prix-h.net,0)});
+const solde=()=>D.hist.reduce((t,h)=>t+(h.ep?-(h.prix-h.net):h.net)-h.cod,0);
+const enAttente=()=>D.vers.reduce((t,v)=>t+v.m,0);
+function accueilV(){const j=sjour(jour());let s;
+ if(D.course)s=courseV();
+ else s=`<div class="sheet"><h2 style="margin:0 0 4px">${D.ligne?'<span class="pulse"></span> En attente de demandes':"Vous êtes hors ligne"}</h2><p class="nt" style="margin:0 0 8px">${D.ligne?"Restez sur cet écran : une demande s'affichera ici avec le gain avant que vous acceptiez.":"Passez en ligne pour recevoir des demandes."}</p>
+ <div class="kpi k3"><div><b>${j.n}</b><span>courses</span></div><div><b>${F(j.net)}</b><span>gain net</span></div><div><b>4,9 ★</b><span>note</span></div></div>
+ <div class="go"><button class="btn ${D.ligne?"sec2":""}" data-a="ligne">${D.ligne?"Passer hors ligne":"Passer en ligne"}</button></div>${D.ligne?`<div class="go"><button class="btn sec2" data-a="simuler" style="font-size:15px;padding:12px">Simuler une demande (démo)</button></div>`:""}</div>`;
+ return`<div class="col"><div id="map"></div>${D.course?`<button class="sos" data-a="sos" aria-label="SOS" style="top:max(14px,env(safe-area-inset-top))">SOS</button>`:`<div class="tt" style="right:14px;left:14px">${bar()}</div>`}${s}</div>`}
+function courseV(){const c=D.course,liv=c.liv,mot=liv?"livraison":"course",f=avance(),eta=c.step==="approche"?Math.max(1,Math.ceil(c.ap*(1-f))):Math.max(1,Math.ceil(c.du*(1-f)));
+ const dest=c.step==="approche"?c.de:c.a,nav=`https://www.google.com/maps/dir/?api=1&destination=${dest.la},${dest.lo}&travelmode=${c.k==="moto"?"two-wheeler":"driving"}`,tel=c.colis&&c.colis.t?c.colis.t.replace(/[^\d+]/g,""):"+2250000000000";
+ const ent={approche:`Rejoindre le client · ≈ ${eta} min`,arrive:"Vous êtes arrivé",cours:`En route · ≈ ${eta} min`,fin:"Terminé : encaissement"}[c.step];
+ let b="";
+ if(c.step==="approche")b=`<div class="go"><a class="lnk" href="${nav}" target="_blank" rel="noopener">Naviguer</a><a class="lnk" href="tel:${tel}">Appeler</a></div><div class="go"><button class="btn" data-a="arrive">Je suis arrivé</button></div><p style="text-align:center;margin:6px 0 0"><button class="pay" style="justify-content:center;color:var(--er)" data-a="annuler">Annuler la ${mot}</button></p>`;
+ else if(c.step==="arrive")b=`<label class="l">Code de confirmation du client<input class="fld cd" data-k="code" inputmode="numeric" maxlength="4" value="${esc(D.f.code)}" autocomplete="off" aria-label="Code à 4 chiffres"></label><p class="nt">Demandez le code au client avant de démarrer. <span class="chip">Démo : ${c.code}</span></p><div class="go"><button class="btn" id="dem" data-a="demarrer" ${D.f.code.length===4?"":"disabled"}>Démarrer la ${mot}</button></div><p style="text-align:center;margin:6px 0 0"><button class="pay" style="justify-content:center;color:var(--er)" data-a="annuler">Annuler la ${mot}</button></p>`;
+ else if(c.step==="cours")b=`<div class="go"><a class="lnk" href="${nav}" target="_blank" rel="noopener">Naviguer</a><a class="lnk" href="tel:${tel}">Appeler</a></div><div class="go"><button class="btn" data-a="terminer">${liv?"Colis remis":"Terminer la course"}</button></div>`;
+ else{const e=aEnc(c);b=`<div class="eb">Prix ${F(c.prix)}${cod(c)?` · montant du colis ${F(cod(c))}`:""}<br>Votre gain net : <b>${F(net(c))}</b> (commission de ${Math.round(COMM*100)} % retenue)</div>${e?`<label class="chk" style="display:flex;gap:10px;align-items:center;margin:10px 0;font-weight:700"><input type="checkbox" data-k="ok" ${D.f.ok?"checked":""} style="width:22px;height:22px"> J'ai encaissé ${F(e)} auprès du client</label>`:`<p class="nt">Déjà réglé par ${esc(c.payLib)} : rien à encaisser.</p>`}<div class="go"><button class="btn" id="enr" data-a="enregistrer" ${e&&!D.f.ok?"disabled":""}>Enregistrer</button></div>`}
+ const info=`<div class="hl"><span><small>${c.step==="approche"||c.step==="arrive"?"Prise en charge":"Destination"}</small><b>${esc(dest.n)}</b> · ${esc(dest.z)}</span><span><b>${F(net(c))}</b><small>gain net</small></span></div>${c.colis&&c.step!=="fin"?`<div class="nt" style="padding:6px 0">${esc(c.colis.c||"Colis")} · destinataire ${esc(c.colis.n||"—")}${cod(c)?` · à encaisser ${F(cod(c))}`:""}</div>`:""}`;
+ return`<div class="sheet"><h2 style="margin:0 0 4px;font-size:20px">${ent}</h2><div class="scroll">${c.step==="fin"?"":info}${b}</div></div>`}
+function gainsV(){const j=sjour(jour()),s=solde(),att=enAttente();return`<div class="page"><h1 style="font-size:24px;margin:0 0 6px">Mes gains</h1><div class="kpi"><div><b>${F(j.net)}</b><span>gain net du jour</span></div><div><b>${j.n}</b><span>course${j.n>1?"s":""} aujourd'hui</span></div><div><b>${F(j.comm)}</b><span>commission du jour</span></div><div><b>${F(D.hist.reduce((t,h)=>t+h.net,0))}</b><span>total depuis le début</span></div></div>
+<div class="eb"><b>Solde avec 11Barré : <span class="${s<0?"ko":"ok"}">${s<0?"vous devez reverser "+F(-s):s>0?"11Barré vous doit "+F(s):"à jour"}</span></b><br><span class="nt">Les courses payées en espèces : vous gardez l'argent et reversez la commission${D.p.type==="livreur"?", plus le montant des colis encaissés":""}. Les courses payées par mobile : 11Barré vous reverse votre gain.</span></div>
+${att?`<p class="nt">Versement en validation : ${F(att)} (le solde change quand 11Barré valide).</p>`:""}${s<0?`<div class="go"><button class="btn" data-a="vers">Déclarer un versement</button></div>`:""}
+<div class="sec">Dernières courses</div>${D.hist.length?D.hist.slice(0,15).map(h=>`<div class="hl"><span><b>${esc(h.de)} → ${esc(h.a)}</b><small>${esc(h.s)} · ${esc(h.d)}${h.cod?" · colis "+F(h.cod):""}</small></span><b>${F(h.net)}</b></div>`).join(""):'<p class="nt">Aucune course pour le moment.</p>'}</div>`}
+function profilV(){return`<div class="page"><h1 style="font-size:24px;margin:0 0 6px">Mon profil</h1><div class="drv" style="margin:10px 0"><div class="av">${esc(D.p.nom[0]||"?")}</div><div><b>${esc(D.p.nom)}</b><br><span class="nt">${TYPES[D.p.type].nom} · ${esc(D.p.tel||"téléphone non renseigné")}</span><br><span class="plate">${plaque()}</span></div></div>
+<button class="opt" data-a="changer"><span class="t"><b>Passer en ${D.p.type==="chauffeur"?"livreur à moto":"chauffeur"}</b><small>Change les types de demandes reçues</small></span>›</button><a class="opt" style="color:inherit;text-decoration:none" href="index.html"><span class="t"><b>Espace client</b><small>Commander une course ou une livraison</small></span>›</a><button class="opt" data-a="raz"><span class="t"><b>Effacer mes courses de démonstration</b><small>Remet les gains à zéro</small></span>›</button><button class="opt" data-a="sortir"><span class="t"><b>Se déconnecter</b></span></button><p class="nt">Commission 11Barré : ${Math.round(COMM*100)} % du prix de la course (valeur de démonstration).</p></div>`}
+function offreV(){const o=D.offre,e=aEnc(o);return`<div class="ov"><div class="sheet" role="dialog" aria-label="Nouvelle demande"><span class="chip">${o.liv?"Livraison":"Course"} · ${esc(o.cat)}</span><h2 style="margin:8px 0 2px;font-size:20px">${esc(o.de.n)} → ${esc(o.a.n)}</h2><p class="nt" style="margin:0">${o.km} km · ≈ ${o.du} min · récupération à ${o.ap} min de vous</p>
+<div class="kpi"><div><b style="font-size:30px;line-height:1.1">${F(net(o))}</b><span>votre gain net</span></div><div><b>${e?F(e):"Déjà payé"}</b><span>${e?"à encaisser":"par "+esc(o.payLib)}</span></div></div>${o.colis?`<div class="eb">${esc(o.colis.c||"Colis")} · destinataire ${esc(o.colis.n||"—")} (${masque(o.colis.t)})${cod(o)?`<br>Montant du colis à encaisser : <b>${F(cod(o))}</b>`:""}</div>`:""}
+<div class="bar" aria-hidden="true"><i id="cdb" style="width:100%"></i></div><p class="nt" style="margin:0 0 6px">Répondre dans <b id="cdn">${DELAI}</b> s</p><div class="go"><button class="btn sec2" data-a="refuser">Refuser</button><button class="btn" data-a="accepter">Accepter</button></div></div></div>`}
+const ov=h=>`<div class="ov" data-a="oclose"><div class="sheet" role="dialog" data-stop="1"><div class="scroll">${h}</div></div></div>`;
+function sheetV(){const s=D.sheet;if(s==="refus")return ov(`<h2 style="margin:4px 0 8px">Pourquoi refusez-vous ?</h2>${["Trop loin","Véhicule en panne ou plus de carburant","Je fais une pause","Zone inconnue"].map(m=>`<button class="opt" data-a="motif" data-m="${esc(m)}"><span class="t"><b>${m}</b></span></button>`).join("")}`);
+ if(s==="annul")return ov(`<h2 style="margin:4px 0 8px">Pourquoi annulez-vous ?</h2>${["Client injoignable","Véhicule en panne","Le client demande d'annuler","Autre raison"].map(m=>`<button class="opt" data-a="motifa" data-m="${esc(m)}"><span class="t"><b>${m}</b></span></button>`).join("")}<p class="nt">Les annulations répétées peuvent réduire vos demandes.</p>`);
+ if(s==="sos")return ov(`<h2 style="margin:4px 0 8px">Besoin d'aide ?</h2><p>Votre position et la course seront envoyées au support 11Barré (démonstration).</p><a class="btn er" style="text-decoration:none;text-align:center;display:block" href="tel:185">Appeler le SAMU (185)</a><div class="go"><a class="lnk" href="tel:110">Police (110)</a><a class="lnk" href="tel:180">Pompiers (180)</a></div><p class="nt">Numéros d'urgence à vérifier avant mise en service.</p><div class="go"><button class="btn sec2" data-a="oclose2">Fermer</button></div>`);
+ if(s==="vers"){const m=D.f.vm||String(Math.max(0,-solde()));return ov(`<h2 style="margin:4px 0 8px">Déclarer un versement</h2><label class="l">Montant (F)<input class="fld" data-k="vm" inputmode="numeric" value="${esc(m)}"></label><div class="sec">Mode</div>${Object.entries(PAYL).map(([k,v])=>`<button class="opt ${D.f.vmode===k?"on":""}" data-a="vmode" data-m="${k}"><span class="dot"></span><span class="t"><b>${v}</b></span></button>`).join("")}${D.f.vmode!=="cash"?`<label class="l">Référence de la transaction (SMS)<input class="fld" data-k="vref" value="${esc(D.f.vref)}" maxlength="30" autocomplete="off"></label>`:""}<p class="nt">11Barré vérifie la réception avant de mettre à jour votre solde.</p><div class="go"><button class="btn" data-a="envoyerv">Envoyer</button></div>`)}
+ return""}
+function nav(){return`<nav class="nav">${[["accueil","🏠","Accueil"],["gains","💰","Gains"],["profil","👤","Profil"]].map(t=>`<button class="${D.tab===t[0]?"on":""}" data-a="tab" data-t="${t[0]}"><b>${t[1]}</b>${t[2]}</button>`).join("")}</nav>`}
+function render(){const a=$("#app");let h;
+ if(!D.p)h=`<div class="col">${loginV()}</div>`;
+ else h=`<div class="col">${D.tab==="accueil"?accueilV():D.tab==="gains"?gainsV():profilV()}${D.course&&D.tab==="accueil"?"":nav()}</div>`;
+ if(D.p&&D.offre)h+=offreV();h+=D.p?sheetV():"";a.innerHTML=h;carte()}
+const toast=m=>{const t=document.createElement("div");t.id="toast";t.textContent=m;$("#app").appendChild(t);setTimeout(()=>t.remove(),2600)};
+/* Actions */
+const A={
+ type(t){D.f.type=t.dataset.t;render()},
+ entrer(){const f=D.f;if(f.nom.trim().length<2)return toast("Indiquez votre nom");D.p={nom:f.nom.trim(),tel:f.tel.trim(),type:f.type};LS.set("profil",D.p);render()},
+ ligne(){D.ligne=!D.ligne;if(D.ligne)LS.set("chauffeur_ligne",Date.now());else LS.set("chauffeur_ligne",0);render()},
+ simuler(){if(D.offre||D.course)return;D.offre=Object.assign(offreSim(),{t0:Date.now()});render()},
+ accepter(){const o=D.offre;if(!o)return;if(o.real){const c=commande();if(!c||c.id!==o.id||c.statut!=="recherche"){D.offre=null;render();toast("Cette demande n'est plus disponible");return}LS.set("commande",Object.assign(c,{statut:"acceptee",chauffeur:[D.p.nom,TYPES[D.p.type].veh,plaque(),4.9]}))}
+  D.course=Object.assign({},o,{step:"approche",ta:Date.now()});D.offre=null;D.f.code="";D.f.ok=false;render()},
+ refuser(){D.sheet="refus";render()},
+ motif(t){const o=D.offre;if(o)REFUSEES.add(o.id);D.offre=null;D.sheet=null;render();toast("Demande refusée : "+t.dataset.m)},
+ annuler(){D.sheet="annul";render()},
+ motifa(t){const c=D.course;majCmd(c,{statut:"annulee"});D.course=null;D.sheet=null;render();toast("Course annulée : "+t.dataset.m)},
+ arrive(){D.course.step="arrive";D.f.code="";majCmd(D.course,{statut:"arrivee"});render()},
+ demarrer(){const c=D.course;if(D.f.code!==c.code)return toast("Code incorrect");c.step="cours";c.tc=Date.now();majCmd(c,{statut:"demarree"});render()},
+ terminer(){const c=D.course;c.step="fin";D.f.ok=false;majCmd(c,{statut:"terminee"});render()},
+ enregistrer(){const c=D.course,e=aEnc(c);if(e&&!D.f.ok)return;D.hist.unshift({id:c.id,de:c.de.n,a:c.a.n,prix:c.prix,net:net(c),cod:cod(c),ep:encPrix(c),s:c.cat,d:AUJ()});D.hist=D.hist.slice(0,60);LS.set("ch_hist",D.hist);const g=net(c);D.course=null;render();toast("Enregistré · +"+F(g))},
+ tab(t){D.tab=t.dataset.t;render()},
+ sos(){D.sheet="sos";render()},oclose2(){D.sheet=null;render()},
+ oclose(t,e){if(e.target.closest("[data-stop]")&&!e.target.closest("[data-a]:not([data-a=oclose])"))return;D.sheet=null;render()},
+ changer(){D.p.type=D.p.type==="chauffeur"?"livreur":"chauffeur";LS.set("profil",D.p);render();toast("Profil : "+TYPES[D.p.type].nom)},
+ raz(){D.hist=[];D.vers=[];LS.set("ch_hist",[]);LS.set("ch_vers",[]);render();toast("Courses de démonstration effacées")},
+ sortir(){D.p=null;D.ligne=false;LS.set("profil",null);LS.set("chauffeur_ligne",0);render()},
+ vers(){D.f.vm="";D.f.vref="";D.sheet="vers";render()},vmode(t){D.f.vmode=t.dataset.m;render()},
+ envoyerv(){const m=Math.round(+D.f.vm||0),mob=D.f.vmode!=="cash";if(m<=0)return toast("Indiquez le montant");if(m>-solde())return toast("Le montant dépasse ce que vous devez");if(mob&&D.f.vref.trim().length<4)return toast("Indiquez la référence de la transaction");if(mob&&D.vers.some(v=>v.ref&&v.ref===D.f.vref.trim()))return toast("Cette référence a déjà été utilisée");D.vers.push({m,mode:D.f.vmode,ref:D.f.vref.trim()});LS.set("ch_vers",D.vers);D.sheet=null;render();toast("Versement déclaré, en validation")}};
+document.addEventListener("click",e=>{const t=e.target.closest("[data-a]");if(!t)return;const f=A[t.dataset.a];if(f)f(t,e)});
+document.addEventListener("input",e=>{const k=e.target.dataset&&e.target.dataset.k;if(!k)return;const v=e.target.type==="checkbox"?e.target.checked:e.target.value;
+ if(k==="code"){D.f.code=v.replace(/\D/g,"").slice(0,4);e.target.value=D.f.code;const b=$("#dem");if(b)b.disabled=D.f.code.length!==4}else{D.f[k]=v;if(k==="ok"){const b=$("#enr");if(b)b.disabled=!v}}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&D.sheet)A.oclose2()});
+/* Boucle : battement de présence, demandes de l'application client, compte à rebours, position simulée */
+setInterval(()=>{if(!D.p)return;const now=Date.now();
+ if(D.ligne)LS.set("chauffeur_ligne",now);
+ const c=commande();
+ if(D.ligne&&!D.offre&&!D.course&&c&&c.statut==="recherche"&&now-c.t<60000&&!REFUSEES.has(c.id)){const o=Object.assign({},c,{real:true,t0:now});if(match(o)){D.offre=o;render()}}
+ if(D.offre&&D.offre.real&&(!c||c.id!==D.offre.id||c.statut!=="recherche")){D.offre=null;D.sheet=null;render();toast("Le client a annulé la demande")}
+ if(D.course&&D.course.real&&(!c||c.id!==D.course.id||c.statut==="annulee_client")&&D.course.step!=="fin"){D.course=null;D.sheet=null;render();toast("Le client a annulé la course")}
+ if(D.offre){const r=DELAI-Math.floor((now-D.offre.t0)/1000);if(r<=0){REFUSEES.add(D.offre.id);D.offre=null;render();toast("Demande expirée")}else{const n=$("#cdn"),b=$("#cdb");if(n)n.textContent=r;if(b)b.style.width=Math.max(0,r/DELAI*100)+"%"}}
+ if(D.course&&(D.course.step==="approche"||D.course.step==="cours")&&D.tab==="accueil"){carte();const h=document.querySelector(".sheet h2");if(h){const f=avance(),c2=D.course,eta=c2.step==="approche"?Math.max(1,Math.ceil(c2.ap*(1-f))):Math.max(1,Math.ceil(c2.du*(1-f)));h.textContent=(c2.step==="approche"?"Rejoindre le client":"En route")+" · ≈ "+eta+" min"}}
+},500);
+window.addEventListener("pagehide",()=>{if(D.ligne)LS.set("chauffeur_ligne",0)});
+if("serviceWorker"in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(()=>{});
+render();
+</script>
+</body>
+</html>
