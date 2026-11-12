@@ -105,3 +105,10 @@ body:has(main) .tabs button.on{background:#fff8df!important;color:#172235!import
   th,td{padding:10px 8px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Carte interactive OSM / Leaflet — coordonnées connues uniquement */
+.client #map{position:relative;display:block;width:100%;height:clamp(260px,38vh,390px);min-height:260px;overflow:hidden;background:#e8edf1;border-radius:0 0 18px 18px;z-index:0}
+.client #map .leaflet-container{width:100%;height:100%;font:inherit;background:#e8edf1}
+.client #map .leaflet-control-attribution{font-size:9px;background:rgba(255,255,255,.82)}
+.client #map .leaflet-control-zoom a{color:#172235}
+@media(max-width:380px){.client #map{height:250px;min-height:250px}}
