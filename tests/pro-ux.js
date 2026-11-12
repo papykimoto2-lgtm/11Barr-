@@ -128,10 +128,22 @@ await pa.keyboard.press("Escape");
 await pf.click('[data-a=tab][data-t=livraisons]');await pf.fill('[data-q]','00099');await pf.click('button.lk >> nth=0');await pf.waitForSelector(".pop");
 const dp=await pf.textContent(".pop");t("portail : photos visibles, offres non affichées, information « sans livreur » compréhensible",(await pf.$$(".pop .vig img")).length===2&&!dp.includes("Offres")&&!dp.includes("Trop loin")&&dp.includes("Aucun livreur n'est disponible"));
 await pf.keyboard.press("Escape");await pf.fill('[data-q]','');
+/* --- relance d'affectation, capacité, onglet Livreurs --- */
+await pa.click('[data-a=tab][data-t=livreurs]');const lv=await pa.textContent("main");
+t("admin : onglet Livreurs avec présence, capacité et fiabilité",lv.includes("Présence")&&lv.includes("Capacité")&&lv.includes("Fiabilité")&&lv.includes("Hors ligne")&&lv.includes("kg"));
+await pa.click('[data-a=tab][data-t=commandes]');await pa.selectOption('[data-filtre]','sanscand');await pa.click('button.lk >> nth=0');
+await pa.click('[data-a=relancer]');t("relance sans motif refusée",(await toast(pa)).includes("motif"));
+await pa.fill('textarea[data-m]','Nouveaux livreurs disponibles');await pa.click('[data-a=relancer]');
+const rl=await pa.evaluate(()=>({o:LIV.lire().find(o=>o.id==="oextra"),a:AUDIT.liste().some(x=>x.action==="relance_affectation"&&x.motif.includes("Nouveaux"))}));
+t("relance : relance_at renseigné, sans_candidat remis à false, audit tracé",rl.o.sans_candidat===false&&rl.o.relance_at>0&&rl.a,rl.o.relance_at);
+await pa.keyboard.press("Escape");await pa.selectOption('[data-filtre]','');
+await pa.evaluate(()=>LIV.maj("o2",o=>{o.colis.poids=50;o.statut="ready_for_assignment"}));await pa.click('[data-a=tab][data-t=tableau]');await pa.click('[data-a=tab][data-t=commandes]');await pa.fill('[data-q]','00003');await pa.click('button.lk >> nth=0');
+t("affectation manuelle : un livreur de capacité insuffisante est signalé et non sélectionnable",await pa.evaluate(()=>{const o=[...document.querySelectorAll("[data-aff] option")].find(x=>x.value==="L1");return !o||(o.disabled&&o.textContent.includes("⚠"))}),await pa.$$eval("[data-aff] option",e=>e.map(x=>x.textContent)));
+await pa.keyboard.press("Escape");await pa.fill('[data-q]','');
 /* --- tarifs : section « Seuils et délais » générée à partir du plan --- */
 await pa.click('[data-a=tab][data-t=tarifs]');const lab0=await pa.$$eval('h2',e=>e.map(x=>x.textContent));
 const cles=await pa.$$eval('[data-pl^="seuils."]',e=>e.map(x=>x.dataset.pl));
-t("tarifs : un champ par clé de plan.seuils, libellés français",cles.length===6&&(await pa.textContent("main")).includes("Alerte sans affectation après (min)")&&(await pa.$$('[data-pl^="options."]')).length===1,cles);
+t("tarifs : un champ par clé de plan.seuils, libellés français",cles.length===await pa.evaluate(()=>Object.keys(M.PLAN_DEFAUT.seuils).length)&&(await pa.textContent("main")).includes("Alerte sans affectation après (min)")&&(await pa.textContent("main")).includes("Délai de réponse à une offre")&&(await pa.$$('[data-pl^="options."]')).length===1&&!!(await pa.$('[data-plb="options.preuve_photo_livraison"]')),cles);
 await pa.evaluate(()=>{const p=JSON.parse(JSON.stringify(M.PLAN_DEFAUT));p.seuils.nouveau_delai_relance_min=7;p.options.assurance_colis=250;p.nouvelle_regle_min=3;p.seuils.reglage_actif=true;LS.set("plan",p)});await pa.reload();await pa.click('[data-a=tab][data-t=tarifs]');
 const cl2=await pa.$$eval('[data-pl^="seuils."]',e=>e.map(x=>x.dataset.pl)),tx=await pa.textContent("main");
 t("tarifs : une clé ajoutée au moteur apparaît sans modifier la page (repli sur le nom de la clé)",cl2.includes("seuils.nouveau_delai_relance_min")&&tx.includes("nouveau_delai_relance_min")&&!!(await pa.$('[data-pl="options.assurance_colis"]'))&&!!(await pa.$('[data-pl="nouvelle_regle_min"]'))&&!!(await pa.$('[data-plb="seuils.reglage_actif"]')),cl2);
@@ -174,7 +186,7 @@ await pf.click('[data-a=tab][data-t=factures]');await pf.click('[data-a=voirfac]
 t("impression de la facture : seule la facture est imprimée, sans boutons, fond blanc",await pf.evaluate(()=>{const v=s=>{const e=document.querySelector(s);return !!e&&getComputedStyle(e).display!=="none"};return !v("header.top")&&!v("main")&&v(".pop.fact")&&!v(".pop .btn")&&getComputedStyle(document.body).backgroundColor==="rgb(255, 255, 255)"&&getComputedStyle(document.querySelector(".ov")).position==="static"}));
 await pf.emulateMedia({media:"screen"});await pf.evaluate(()=>{delete document.body.dataset.print});await pf.keyboard.press("Escape");
 /* --- actions irréversibles : confirmation (administration) --- */
-await pa.click('[data-a=tab][data-t=commandes]');await pa.click('button.lk >> nth=3');await pa.fill('textarea[data-m]','Test');
+await pa.click('[data-a=tab][data-t=commandes]');await pa.fill('[data-q]','00006');await pa.click('button.lk >> nth=0');await pa.fill('textarea[data-m]','Test');
 const annB=await pa.$('[data-a=annulercmd]');if(annB){await pa.click('[data-a=annulercmd]');t("admin : annulation de commande demande confirmation avant d'agir",!!(await pa.$("[role=alertdialog]"))&&(await pa.evaluate(()=>LIV.lire().filter(o=>o.statut==="cancelled").length))===10);await pa.click('[data-a=confirmno]');t("admin : « non » ne change rien",(await pa.evaluate(()=>LIV.lire().filter(o=>o.statut==="cancelled").length))===10)}
 else t("admin : bouton d'annulation disponible",false);
 await pa.keyboard.press("Escape");

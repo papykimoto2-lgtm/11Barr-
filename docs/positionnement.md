@@ -53,26 +53,26 @@ Une infrastructure logistique numérique qui connecte particuliers, commerçants
 
 ---
 
-## État de couverture du produit (12 novembre 2026)
+## État de couverture du produit (13 novembre 2026)
 Légende : ✅ fait (maquette locale testée) · 🟡 partiel · ❌ à construire. « Maquette locale » = données sur l'appareil, sans serveur.
 
 | Axe / espace | État | Ce qui existe | Ce qui manque |
 |---|---|---|---|
-| 1. Moto + Cargo | 🟡 | Catégories Moto-taxi, Livraison à moto, Express Cargo, Camion ; **choix automatique Moto ou Cargo selon le poids et le volume** (seuils paramétrables) ; profils chauffeur et livreur ; demandes filtrées par type | Capacité des véhicules (poids, volume, dimensions), documents et assurances, refus d'affectation si sous-capacité, espace transporteur Cargo (flotte, conducteurs) |
+| 1. Moto + Cargo | 🟡 | Catégories Moto-taxi, Livraison à moto, Express Cargo, Camion ; **choix automatique Moto ou Cargo selon le poids et le volume** (seuils paramétrables) ; **capacité des véhicules** (poids, volume) vérifiée avant toute offre ; dossier avec documents et assurance contrôlés par l'administration | Dimensions détaillées, gestion d'une flotte de plusieurs véhicules et conducteurs par transporteur, justificatifs en pièces jointes |
 | 2. Portail professionnel | 🟡 | Maquette `fournisseur.html` : inscription et validation du compte, points de collecte, création de livraisons avec devis détaillé, **import CSV** avec aperçu, rapport d'erreurs et refus des doublons, suivi en direct avec historique et preuve, factures périodiques imprimables, utilisateurs collaborateurs (administrateur, opérateur, lecture seule) | Carnet de destinataires, livraisons récurrentes, analyse des dépenses, exports XLSX/PDF, programmation à une date |
 | 3. Paiement à la livraison | ✅ maquette | Journal immuable ; produit dû au fournisseur, transport, part du livreur, commission, tous distincts ; fonds de tiers jamais comptés en revenu ; 7 scénarios financiers du dossier testés ; **relevé par fournisseur et demande de reversement** dans le portail ; reversement refusé tant que les livreurs n'ont pas remis les fonds | Preuve de collecte (photo, signature), consolidation de plusieurs fournisseurs, rapprochement bancaire |
-| 4. Gestion des transporteurs | 🟡 | Gains, solde avec 11Barré, déclaration et validation de versement | Performances, documents, règlement par la plateforme (interface), historique détaillé |
+| 4. Gestion des transporteurs | 🟡 | Dossier validé par l'administration, gains, solde, versements, **règlements par la plateforme avec double approbation**, fiabilité (taux d'acceptation, refus, expirations) | Espace entreprise de transport multi-conducteurs, performances détaillées, documents en pièces jointes |
 | 5. Logistique entreprises | 🟡 | Plans tarifaires datés ; **remise de contrat** par client ; transport facturé au compte avec créance ; **facturation périodique** numérotée ; tableau de bord du client | Contrats (durée, conditions), tarifs négociés par zone ou catégorie, plafond de crédit, relances, TVA |
-| 6. Affectation intelligente | ❌ | Diffusion à tout chauffeur en ligne du bon profil, acceptation sous 30 s | Classement par proximité, disponibilité, capacité, temps estimé, fiabilité ; relance au suivant en cas de refus |
+| 6. Affectation intelligente | ✅ maquette | **Répartiteur** : filtres éliminatoires (validé, assurance, type, capacité, en ligne, non refusé) puis score (proximité, fiabilité, charge) ; une offre à la fois, relance au suivant en cas de refus ou d'expiration ; alerte « sans livreur disponible » et relance par l'administration ; affectation manuelle motivée et auditée | Temps de trajet réel (cartographie), positions GPS réelles, optimisation de tournées |
 
 | Espace | État |
 |---|---|
-| 1. Application client | 🟡 maquette complète du parcours, prix détaillé avant commande |
-| 2. Application livreur Moto | 🟡 maquette complète (demande, course, code, encaissement, gains) |
+| 1. Application client | ✅ maquette complète (prix détaillé avant commande, reprise, reçu, avis) |
+| 2. Application livreur Moto | ✅ maquette complète (dossier, offres ciblées, course, codes, photos, encaissement, gains, fiabilité) |
 | 3. Application transporteur Cargo | ❌ |
-| 4. Portail fournisseur et entreprise | 🟡 maquette complète du parcours principal |
-| 5. Administration centrale | ❌ (validations simulées par des boutons « démo » : compte entreprise, versement livreur, reversement fournisseur, paiement de facture) |
-| 6. Gestion financière et comptable | 🟡 moteur et tests ; aucune interface comptable |
+| 4. Portail fournisseur et entreprise | ✅ maquette complète du parcours principal, adaptée au téléphone |
+| 5. Administration centrale | ✅ maquette : équipe et rôles, validations (comptes, livreurs, versements, reversements, règlements, factures), affectation manuelle, tarifs versionnés et simulateur, incidents, audit |
+| 6. Gestion financière et comptable | ✅ maquette : journal immuable, double approbation, rapprochement, export ; reste le plan SYSCOHADA et la fiscalité |
 | 7. Flottes et partenaires | ❌ |
 
-Transversal : suivi GPS et carte **simulés** (aucune vraie position) ; preuve de livraison limitée au code de confirmation (pas de photo ni de signature) ; aucune base de données ni authentification serveur.
+Transversal : suivi GPS et carte **simulés** (aucune vraie position en direct) ; preuves : codes et photo (pas de signature manuscrite) ; **aucune base de données ni authentification serveur** (tout est local à l'appareil) ; aucun paiement mobile réel ; grille de prix, commission et seuils = valeurs de démonstration à valider ; taxes et mentions fiscales à définir avec un conseil.
