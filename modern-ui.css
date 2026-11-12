@@ -1,0 +1,98 @@
+/* 11Barré — couche visuelle moderne V1
+   Couche purement CSS : conserve les composants, identifiants et comportements métier existants. */
+:root{
+  --bg:#f3f6fb;--card:#fff;--ink:#142238;--mu:#66758b;--acc:#f6bd16;--accink:#172235;
+  --ok:#13845b;--er:#c43d4b;--wa:#a96b12;--bl:#2864d7;--line:#e4eaf2;--bd:#cbd5e1;
+  --soft:#f0f4fa;--ring:#326fe0;--onc:#fff;
+  --shadow-sm:0 2px 8px rgba(22,42,72,.05);
+  --shadow-md:0 12px 32px rgba(22,42,72,.09);
+  --shadow-lg:0 22px 60px rgba(22,42,72,.14);
+  --radius:18px;
+}
+html{scroll-behavior:smooth}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:-.012em}
+button,input,select,textarea{font-family:inherit}
+button,.btn,a{transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+button:active,.btn:active{transform:translateY(1px)}
+:focus-visible{outline:3px solid rgba(50,111,224,.32)!important;outline-offset:2px!important}
+a{color:var(--bl)}
+/* Surfaces et cartes */
+.card,.panel,.box,.tile,.kpi>div,.stat,.section-card,.item,.order,.mission,.sheet,.modal,.dialog{
+  border:1px solid var(--line)!important;border-radius:var(--radius)!important;
+  box-shadow:var(--shadow-sm);
+}
+.card,.panel,.box,.section-card{background:var(--card)}
+.kpi>div{padding:16px!important;box-shadow:var(--shadow-sm)!important}
+.kpi b{letter-spacing:-.045em;font-size:clamp(21px,3vw,29px)!important}
+.kpi span,.muted,.hint,.subtle{color:var(--mu)}
+/* Actions */
+button,.btn{border-radius:12px}
+button:not(.nav button):not(.tab button):not(.icon-btn),.btn{
+  font-weight:700;
+}
+button.primary,.btn.primary,.btn-main,.cta,.action-primary{
+  background:var(--ink)!important;color:#fff!important;border:1px solid var(--ink)!important;
+  box-shadow:0 5px 14px rgba(20,34,56,.16);
+}
+button.primary:hover,.btn.primary:hover,.btn-main:hover,.cta:hover,.action-primary:hover{
+  background:#263d5d!important;box-shadow:0 8px 20px rgba(20,34,56,.2)
+}
+button:not(.primary):not(.btn-main):not(.cta):not(.action-primary){
+  border-color:var(--line);
+}
+button:hover,.btn:hover{filter:brightness(.985)}
+/* Champs */
+input,select,textarea{
+  border:1px solid var(--bd)!important;border-radius:11px!important;background:var(--card);
+  min-height:42px;padding:10px 12px;box-shadow:inset 0 1px 2px rgba(20,34,56,.025);
+}
+input:focus,select:focus,textarea:focus{border-color:var(--ring)!important;box-shadow:0 0 0 3px rgba(50,111,224,.11)!important;outline:0}
+label{font-weight:650}
+/* Navigation, en-têtes et onglets */
+header,.top,.app-header,.head,.toolbar,.bar-top{
+  border-color:var(--line);
+}
+.top{padding-left:20px;padding-right:20px}
+.logo{letter-spacing:-.055em}
+.nav,.tabs,.tabbar,.bottom-nav{
+  border-color:var(--line)!important;
+}
+.nav button,.tabs button,.tabbar button{
+  border-radius:11px!important;transition:all .18s ease;
+}
+.nav button.on,.tabs button.on,.tabbar button.on{
+  color:var(--ink)!important;background:var(--soft)!important;
+}
+/* Badges et états */
+.st,.badge,.tag,.pill,.status{
+  border-radius:999px!important;font-weight:750;letter-spacing:0;
+}
+hr{border:0;border-top:1px solid var(--line)}
+/* Tables plus lisibles */
+table{border-collapse:separate;border-spacing:0;width:100%;overflow:hidden;border-radius:14px}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.055em;color:var(--mu);font-weight:800}
+th,td{padding:12px 13px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:rgba(240,244,250,.7)}
+/* Client : fond net, barre de recherche et cartes de services */
+#app{background:var(--bg)}
+.home{scrollbar-width:thin}
+.ib{border:1px solid var(--line)!important;box-shadow:var(--shadow-sm)!important}
+.tiles>*{border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow-sm)}
+/* Portails : respiration et surfaces */
+.page{scrollbar-width:thin}
+.wrap{max-width:1080px}
+.modal,.sheet,.dialog{box-shadow:var(--shadow-lg)!important}
+@media(min-width:760px){
+  body:not(.client){background:var(--bg)}
+  .page{padding-left:24px;padding-right:24px}
+}
+@media(max-width:600px){
+  :root{--radius:15px}
+  .kpi>div{padding:13px!important}
+  th,td{padding:10px 9px}
+  input,select,textarea{font-size:16px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
