@@ -103,5 +103,37 @@ const FIXE = (v) => ({ id: "p", version: 1, commission: { type: "fixe", valeur: 
   t("versement : après avoir reversé 442, le livreur détient 2 508 pour 2 508 de gains : solde 0", apres.especes === 2508 && apres.gains === 2508 && apres.solde === 0, apres);
   t("versement : au-delà de l'espèces détenue refusé", leve(() => M.verser(L, { ref: "V2", livreur: "L1", montant: 99999 }), "VERSEMENT_EXCESSIF"));
 }
+
+/* --- Portail fournisseur : choix Moto/Cargo, remise de contrat, compte pro, relevé, reversement, facture --- */
+{
+  const P = M.PLAN_DEFAUT;
+  t("catégorie : 3 kg → moto", M.choisirCategorie(P, { poids_kg: 3, volume_m3: 0.02 }).mode === "moto");
+  t("catégorie : 40 kg → camionnette (Cargo)", M.choisirCategorie(P, { poids_kg: 40 }).cat === "ex");
+  t("catégorie : 800 kg → camion", M.choisirCategorie(P, { poids_kg: 800 }).cat === "ca");
+  t("catégorie : léger mais volumineux → pas de moto", M.choisirCategorie(P, { poids_kg: 2, volume_m3: 0.5 }).mode === "cargo");
+  t("catégorie : valeurs négatives refusées", leve(() => M.choisirCategorie(P, { poids_kg: -1 }), "DIMENSIONS_INVALIDES"));
+  const sans = M.devis(P, { cat: "lm", km: 8 }), avec = M.devis(P, { cat: "lm", km: 8, remise: 0.1 });
+  t("contrat : remise 10 % visible en ligne négative et total réduit", avec.total < sans.total && avec.lignes.some((l) => l.code === "remise_contrat" && l.montant < 0) && avec.lignes.reduce((s, l) => s + l.montant, 0) === avec.total, avec.lignes);
+
+  const L = M.nouveauLivre();
+  M.cloturer(L, { ref: "B1", plan: FIXE(500), total: 2000, paiement: "compte", client: "S1", livreur: "L1" });
+  t("compte pro : transport facturé = créance 2 000, aucun encaissement ni espèces", M.creance(L, "S1") === 2000 && M.solde(L, "caisse").debit === 0 && M.soldeLivreur(L, "L1").gains === 1500 && M.equilibre(L));
+  t("compte pro : client obligatoire", leve(() => M.cloturer(L, { ref: "B2", plan: FIXE(500), total: 2000, paiement: "compte", livreur: "L1" }), "CLIENT_OBLIGATOIRE"));
+  M.cloturer(L, { ref: "B3", plan: FIXE(500), total: 2000, produit: 25000, paiement: "cod", transport: "compte", client: "S1", fournisseur: "S1", livreur: "L1" });
+  t("COD + transport facturé : le livreur n'encaisse que 25 000 ; fonds de tiers 25 000 ; revenu 1 000", M.solde(L, "especes:L1").debit === 25000 && M.fondsTiers(L) === 25000 && M.revenuPropre(L) === 1000 && M.creance(L, "S1") === 4000 && M.equilibre(L));
+  M.verser(L, { ref: "VB", livreur: "L1", montant: 25000 });
+  const rel = M.releveFournisseur(L, "S1");
+  t("relevé fournisseur : une ligne COD de 25 000 rattachée à la commande, solde 25 000", rel.lignes.length === 1 && rel.lignes[0].commande === "B3" && rel.solde === 25000, rel);
+  M.reverserFournisseur(L, { ref: "RV1", fournisseur: "S1", montant: 10000, reference: "WV-001" });
+  t("reversement fournisseur : solde 15 000, référence conservée, relevé à jour", M.fondsTiers(L) === 15000 && M.releveFournisseur(L, "S1").lignes[1].reference === "WV-001");
+  t("reversement : jamais au-delà de ce qui est dû", leve(() => M.reverserFournisseur(L, { ref: "RV2", fournisseur: "S1", montant: 15001 }), "REVERSEMENT_EXCESSIF"));
+  M.encaisserCreance(L, { ref: "F1", client: "S1", montant: 4000, facture: "FAC-1", reference: "VIR-77" });
+  t("facture payée : créance soldée, caisse créditée ; surpaiement refusé", M.creance(L, "S1") === 0 && leve(() => M.encaisserCreance(L, { ref: "F2", client: "S1", montant: 1 }), "PAIEMENT_EXCESSIF") && M.equilibre(L));
+  const f = M.facture({ numero: "FAC-2026-0001", client: "S1", clientNom: "Boutique Test", periode: "2026-11", lignes: [{ ref: "B1", libelle: "Livraison B1", montant: 2000 }, { ref: "B3", libelle: "Livraison B3", montant: 2000 }] });
+  t("facture : total = somme des lignes, gelée, taxes à paramétrer", f.total === 4000 && Object.isFrozen(f) && Object.isFrozen(f.lignes[0]) && f.statut === "emise");
+  t("facture : sans ligne ou montant décimal refusée", leve(() => M.facture({ numero: "X", client: "S1", lignes: [] }), "FACTURE_INVALIDE") && leve(() => M.facture({ numero: "X", client: "S1", lignes: [{ ref: "a", libelle: "a", montant: 1.5 }] }), "FACTURE_INVALIDE"));
+  const c = { id: "R1", statut: "courier_to_pickup" }; M.changerStatut(c, "ready_for_assignment", "livreur", "réaffectation");
+  t("statuts : réaffectation possible tant que le colis n'est pas collecté", c.statut === "ready_for_assignment" && !M.peutPasser("picked_up", "ready_for_assignment"));
+}
 console.log(ok + " PASS, " + ko + " FAIL");
 process.exit(ko ? 1 : 0);

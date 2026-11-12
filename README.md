@@ -18,8 +18,19 @@ Ouvrir `index.html` (application client) et `chauffeur.html` (espace chauffeur e
 - **Gains** : gain net du jour, courses, commission (15 %, valeur de démonstration), total. **Solde avec 11Barré** : en espèces le chauffeur garde l'argent et reverse la commission (plus le montant des colis encaissés) ; en paiement mobile, 11Barré lui reverse son gain. **Déclaration de versement** (espèces, Wave, Orange, MTN) avec référence unique, « en validation ».
 - **Lien avec l'application client** : si les deux pages sont ouvertes sur le même appareil, une commande du client arrive en direct chez le chauffeur en ligne ; son acceptation, son arrivée, le démarrage et la fin sont suivis en direct côté client, avec le vrai nom du chauffeur. Sans chauffeur en ligne, le client retombe sur une course de démonstration après 20 s. Sans client, « Simuler une demande » génère une demande fictive.
 
+## Portail fournisseur et entreprise (`fournisseur.html`)
+Portail pour les marchands et les entreprises clientes (dossier fonctionnel §5.2), d'écran large, installable :
+- **Compte** : inscription (type, raison sociale, RCCM, contact, facturation, premier point de collecte) puis validation par 11Barré ; un compte non validé ne peut rien créer. Trois rôles : administrateur, opérateur (crée, importe, annule), lecture seule (consulte livraisons et finance).
+- **Nouvelle livraison** : point de collecte, destinataire, destination, colis (poids, volume), vitesse, porte à porte, montant à encaisser, transport payé par le compte ou par le destinataire. Le **devis** se met à jour en direct avec ses lignes, le mode (Moto ou Cargo, choisi par le poids et le volume) et la **remise de contrat**. Deux codes sont générés : code de collecte (remis au livreur) et code de livraison (donné au destinataire).
+- **Import CSV** : collage ou fichier, aperçu ligne par ligne (destinataire, téléphone, destination connue, poids, montant, vitesse), **doublons refusés** (dans le fichier et avec l'existant), création des seules lignes valides, rapport d'erreurs téléchargeable.
+- **Suivi en direct** : les statuts du moteur (recherche d'un livreur, en route vers la collecte, en transit, livré…) reviennent du livreur avec historique horodaté, preuve (code du destinataire vérifié) et annulation selon le statut.
+- **Paiements à la livraison** : encaissé pour le compte du fournisseur, reversé, solde ; relevé par commande ; demande de reversement plafonnée au dû ; exécution refusée tant que les livreurs n'ont pas remis les fonds.
+- **Factures** : facturation périodique du transport facturé au compte, numérotée, imprimable ; paiement enregistré par le comptable.
+- **Lien avec l'espace livreur** : une livraison créée ici est proposée aux livreurs en ligne du bon type ; collecte et livraison exigent les codes ; la clôture alimente le journal financier. Les validations de 11Barré (compte, versement, reversement, paiement de facture) sont simulées par des boutons « démo ».
+- Test : `node tests/portail.js` (37 contrôles, deux pages).
+
 ## Règles métier (`moteur.js`) — d'après les dossiers fonctionnel et technique V1
-Moteur sans interface ni stockage, utilisé par les deux applications et testé seul (`node tests/moteur.js`, 36 contrôles) :
+Moteur sans interface ni stockage, utilisé par les deux applications et testé seul (`node tests/moteur.js`, 52 contrôles) :
 - **Statuts de commande** : cycle `draft → quoted → … → delivered` avec transitions autorisées, événements figés et historisés ; une commande livrée ne revient jamais en arrière ; clôture exigeant la preuve (code de confirmation).
 - **Devis paramétrable** : la grille de prix, les vitesses, les options, la validité du devis (15 min) et la commission sont les paramètres d'un **plan daté** (`PLAN_DEFAUT` = grille de démonstration). Le devis détaille ses lignes, expire et conserve la photographie des paramètres. Un autre plan (stocké sous la clé locale `onzebarre_plan`) change les prix sans toucher au code.
 - **Journal des mouvements immuable** : écritures gelées, équilibrées (débits = crédits), montants entiers, référence et clé d'idempotence uniques. Les soldes se déduisent du journal, jamais d'une valeur écrasée.
@@ -36,7 +47,7 @@ Moteur sans interface ni stockage, utilisé par les deux applications et testé 
 Compte client et authentification, base de données (commandes, chauffeurs, livreurs), moteur d'adresses et d'itinéraires, grille de prix réelle, affectation automatique, notifications push, paiement mobile intégré (accords opérateurs), application chauffeur/livreur. Les numéros d'urgence affichés (185, 110, 180) sont à vérifier.
 
 ## Fichiers
-`index.html` (client) · `chauffeur.html` (chauffeur et livreur) · `commun.js` et `commun.css` (socle partagé) · `moteur.js` (règles métier) · `tests/` · `manifest*.webmanifest` · `sw.js` · `vercel.json` · `icons/`
+`index.html` (client) · `chauffeur.html` (chauffeur et livreur) · `fournisseur.html` (portail entreprise) · `commun.js` et `commun.css` (socle partagé) · `moteur.js` (règles métier) · `tests/` · `manifest*.webmanifest` · `sw.js` · `vercel.json` · `icons/`
 
 ## Déploiement
 Site statique : aucune commande de build, dossier racine `./`, aucun framework (preset « Other » sur Vercel). Chaque push sur `main` redéploie automatiquement. `vercel.json` ajoute les en-têtes de sécurité et empêche la mise en cache du service worker.

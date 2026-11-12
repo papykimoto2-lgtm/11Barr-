@@ -18,7 +18,7 @@
     awaiting_payment: ["ready_for_assignment", "cancelled"],
     ready_for_assignment: ["assigned", "cancelled"],
     assigned: ["ready_for_assignment", "courier_to_pickup", "cancelled"],
-    courier_to_pickup: ["picked_up", "cancelled", "failed_delivery"],
+    courier_to_pickup: ["picked_up", "ready_for_assignment", "cancelled", "failed_delivery"],
     picked_up: ["in_transit", "failed_delivery"],
     in_transit: ["arrived", "failed_delivery"],
     arrived: ["delivered", "failed_delivery"],
@@ -50,6 +50,7 @@
     },
     vitesses: { exp: 1.6, std: 1, grp: 0.85, diff: 0.7 },
     options: { porte_a_porte: 200 },
+    seuils: { moto_poids_max_kg: 10, moto_volume_max_m3: 0.08, utilitaire_poids_max_kg: 500, utilitaire_volume_max_m3: 4 },
     commission: { type: "pourcentage", valeur: 0.15 }
   });
   const arr = (n, pas) => Math.round(n / pas) * pas;
@@ -66,9 +67,21 @@
       const t2 = Math.max(plan.plancher_vitesse, arr(total * m, plan.arrondi));
       if (t2 !== total) lignes.push({ code: "vitesse", libelle: "Vitesse « " + e.vitesse + " »", montant: t2 - total }); total = t2;
     }
+    if (e.remise > 0 && e.remise < 1) {   /* tarif négocié du contrat : remise en pourcentage, arrondie au pas du plan */
+      const rm = arr(total * e.remise, plan.arrondi);
+      if (rm > 0) { lignes.push({ code: "remise_contrat", libelle: "Remise contrat " + Math.round(e.remise * 100) + " %", montant: -rm }); total -= rm; }
+    }
     if (c.liv && e.porte) { lignes.push({ code: "porte_a_porte", libelle: "Porte à porte", montant: plan.options.porte_a_porte }); total += plan.options.porte_a_porte; }
     const t0 = now || Date.now();
     return { plan_id: plan.id, plan_version: plan.version, devise: plan.devise, lignes, sous_total: base, total, expire_le: t0 + plan.validite_devis_min * 60000, snapshot: { cat: e.cat, km, vitesse: e.vitesse || "std", porte: !!e.porte } };
+  };
+  /** Choisit Moto, utilitaire ou camion selon le poids et le volume (seuils du plan). Les seuils sont des paramètres à valider. */
+  M.choisirCategorie = (plan, e) => {
+    const s = plan.seuils, p = +e.poids_kg || 0, v = +e.volume_m3 || 0;
+    if (p < 0 || v < 0) throw err("DIMENSIONS_INVALIDES", "Poids et volume doivent être positifs");
+    if (p <= s.moto_poids_max_kg && v <= s.moto_volume_max_m3) return { cat: "lm", mode: "moto", raison: "Colis léger : compatible moto" };
+    if (p <= s.utilitaire_poids_max_kg && v <= s.utilitaire_volume_max_m3) return { cat: "ex", mode: "cargo", raison: "Dépasse la capacité moto : camionnette" };
+    return { cat: "ca", mode: "cargo", raison: "Gros volume ou poids : camion" };
   };
   M.devisValide = (d, now) => !!d && (now || Date.now()) < d.expire_le;
   /** Répartition d'un montant de transport entre le prestataire et la plateforme (règle du plan). */
@@ -122,18 +135,22 @@
     const rep = M.repartition(o.plan, o.total);
     if (!Number.isInteger(o.total) || o.total <= 0) throw err("MONTANT_INVALIDE", "Montant de transport invalide");
     let lignes;
+    const tCompte = () => { if (!o.client) throw err("CLIENT_OBLIGATOIRE", "Compte client obligatoire"); return { compte: "creance_client:" + o.client, debit: o.total, credit: 0 }; };
     if (o.paiement === "numerique") lignes = [{ compte: "caisse", debit: o.total, credit: 0 }];
+    else if (o.paiement === "compte") lignes = [tCompte()];
     else if (o.paiement === "cash") lignes = [{ compte: "especes:" + o.livreur, debit: o.total, credit: 0 }];
     else if (o.paiement === "cod") {
       if (!o.fournisseur || !(o.produit > 0) || !Number.isInteger(o.produit)) throw err("COD_INVALIDE", "COD : fournisseur et montant du produit obligatoires");
       const encaisse = o.transport === "numerique"   /* transport déjà payé en ligne : le livreur n'encaisse que le produit */
         ? [{ compte: "caisse", debit: o.total, credit: 0 }, { compte: "especes:" + o.livreur, debit: o.produit, credit: 0 }]
-        : [{ compte: "especes:" + o.livreur, debit: o.total + o.produit, credit: 0 }];
+        : o.transport === "compte"                   /* transport facturé au compte pro : le livreur n'encaisse que le produit */
+          ? [tCompte(), { compte: "especes:" + o.livreur, debit: o.produit, credit: 0 }]
+          : [{ compte: "especes:" + o.livreur, debit: o.total + o.produit, credit: 0 }];
       lignes = encaisse.concat([{ compte: "dette_fournisseur:" + o.fournisseur, debit: 0, credit: o.produit }]);
     } else throw err("PAIEMENT_INCONNU", "Mode de paiement inconnu : " + o.paiement);
     if (rep.livreur > 0) lignes.push({ compte: "dette_livreur:" + o.livreur, debit: 0, credit: rep.livreur });
     if (rep.plateforme > 0) lignes.push({ compte: "produit_commission", debit: 0, credit: rep.plateforme });
-    return M.poster(L, { ref: "CL-" + o.ref, type: "cloture_livraison", idem: o.idem || "cloture:" + o.ref, at: o.at, lignes, meta: { commande: o.ref, paiement: o.paiement, transport: o.total, produit: o.produit || 0, livreur: o.livreur, regle: o.plan.commission, plan: o.plan.id + "@" + o.plan.version } });
+    return M.poster(L, { ref: "CL-" + o.ref, type: "cloture_livraison", idem: o.idem || "cloture:" + o.ref, at: o.at, lignes, meta: { commande: o.ref, client: o.client || "", fournisseur: o.fournisseur || "", paiement: o.paiement, transport: o.total, produit: o.produit || 0, livreur: o.livreur, regle: o.plan.commission, plan: o.plan.id + "@" + o.plan.version } });
   };
   /** Encaissement d'un paiement (webhook ou validation) : écrit une seule fois par événement (idempotence). */
   M.encaisser = (L, o) => M.poster(L, { ref: "PAY-" + o.ref, type: "paiement", idem: o.evenement || "paiement:" + o.ref, at: o.at, lignes: [{ compte: "caisse", debit: o.montant, credit: 0 }, { compte: "produit_transport", debit: 0, credit: o.montant }], meta: { paiement: o.ref, montant: o.montant } });
@@ -153,6 +170,32 @@
   M.regler = (L, o) => {
     const du = M.solde(L, "dette_livreur:" + o.livreur).net; if (!(o.montant > 0) || o.montant > du) throw err("REGLEMENT_EXCESSIF", "Montant dû : " + du);
     return M.poster(L, { ref: "REG-" + o.ref, type: "reglement_livreur", idem: o.idem || "reglement:" + o.ref, at: o.at, lignes: [{ compte: "dette_livreur:" + o.livreur, debit: o.montant, credit: 0 }, { compte: "caisse", debit: 0, credit: o.montant }], meta: { livreur: o.livreur, reference: o.reference || "" } });
+  };
+  /** Créance d'un client à compte (transport facturé, non encore payé). */
+  M.creance = (L, client) => { const s = M.solde(L, "creance_client:" + client); return s.debit - s.credit; };
+  /** Paiement d'une facture par un client à compte : plafonné à la créance. */
+  M.encaisserCreance = (L, o) => {
+    if (!(o.montant > 0) || o.montant > M.creance(L, o.client)) throw err("PAIEMENT_EXCESSIF", "Créance restante : " + M.creance(L, o.client));
+    return M.poster(L, { ref: "ENC-" + o.ref, type: "paiement_facture", idem: o.idem || "encaissement:" + o.ref, at: o.at, lignes: [{ compte: "caisse", debit: o.montant, credit: 0 }, { compte: "creance_client:" + o.client, debit: 0, credit: o.montant }], meta: { client: o.client, reference: o.reference || "", facture: o.facture || "" } });
+  };
+  /** Reversement à un fournisseur : jamais au-delà de ce qui lui est dû ; la référence de paiement est conservée. */
+  M.reverserFournisseur = (L, o) => {
+    const du = M.solde(L, "dette_fournisseur:" + o.fournisseur).net;
+    if (!(o.montant > 0) || o.montant > du) throw err("REVERSEMENT_EXCESSIF", "Montant dû : " + du);
+    return M.poster(L, { ref: "RVF-" + o.ref, type: "reversement_fournisseur", idem: o.idem || "reversement:" + o.ref, at: o.at, lignes: [{ compte: "dette_fournisseur:" + o.fournisseur, debit: o.montant, credit: 0 }, { compte: "caisse", debit: 0, credit: o.montant }], meta: { fournisseur: o.fournisseur, reference: o.reference || "" } });
+  };
+  /** Relevé d'un fournisseur : une ligne par mouvement de son compte de tiers, avec solde cumulé. */
+  M.releveFournisseur = (L, id) => {
+    const lignes = []; let cumul = 0;
+    L.tx.forEach((t) => t.lignes.forEach((l) => { if (l.compte === "dette_fournisseur:" + id) { cumul += l.credit - l.debit; lignes.push({ at: t.at, ref: t.ref, type: t.type, commande: t.meta.commande || "", collecte: l.credit, reverse: l.debit, solde: cumul, reference: t.meta.reference || "" }); } }));
+    return { lignes, solde: cumul };
+  };
+  /** Facture d'une période : lignes issues des livraisons livrées, numéro fourni par l'appelant, jamais modifiable. Taxes : à paramétrer avec le conseil fiscal. */
+  M.facture = (o) => {
+    if (!o.numero || !o.client || !Array.isArray(o.lignes) || !o.lignes.length) throw err("FACTURE_INVALIDE", "Numéro, client et au moins une ligne sont obligatoires");
+    o.lignes.forEach((l) => { if (!Number.isInteger(l.montant) || l.montant < 0) throw err("FACTURE_INVALIDE", "Montant de ligne invalide"); });
+    const sous = o.lignes.reduce((s, l) => s + l.montant, 0), taxes = Math.round(o.taxes || 0);
+    return gel({ numero: o.numero, emetteur: o.emetteur || "11Barré", client: o.client, clientNom: o.clientNom || "", periode: o.periode || "", emise_le: o.at || Date.now(), echeance: o.echeance || null, devise: o.devise || "FCFA", lignes: o.lignes.map((l) => ({ ref: l.ref, libelle: l.libelle, montant: l.montant })), sous_total: sous, taxes, total: sous + taxes, statut: "emise" });
   };
   /** Rapprochement : compare le prestataire et la caisse du journal. Signale l'écart, ne corrige rien. */
   M.rapprocher = (L, montantPrestataire) => {

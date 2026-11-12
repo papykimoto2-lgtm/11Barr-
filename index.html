@@ -101,7 +101,7 @@ function render(){const a=$("#app");let h="";
  if(S.sheet==="pay")h+=shPay();else if(S.sheet==="det")h+=shDet();else if(S.sheet==="menu")h+=shMenu();else if(S.sheet==="hist")h+=shHist();else if(S.sheet==="sos")h+=shSos();
  if(S.ph==="live"&&S.run&&S.run.step==="end")h+=rate();
  a.innerHTML=h;carte();if(S.pick){plist();const q=$("#pq");if(q)q.focus()}}
-const toast=m=>{const t=document.createElement("div");t.id="toast";t.textContent=m;$("#app").appendChild(t);setTimeout(()=>t.remove(),2600)};
+const toast=m=>{document.querySelectorAll("#toast").forEach(x=>x.remove());const t=document.createElement("div");t.id="toast";t.textContent=m;$("#app").appendChild(t);setTimeout(()=>t.remove(),2600)};
 /* Course simulée : recherche → approche → arrivée → trajet → fin */
 let tm=null;
 function lancer(){const c=catCur(),d=DRV[Math.floor(Math.random()*DRV.length)],ap=approche(c),du=duree();

@@ -7,6 +7,8 @@ const hash=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;ret
 const km=(a,b)=>{const R=6371,t=x=>x*Math.PI/180,dl=t(b.la-a.la),dn=t(b.lo-a.lo),q=Math.sin(dl/2)**2+Math.cos(t(a.la))*Math.cos(t(b.la))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(q))};
 /* Lieux de démonstration (Grand Abidjan), coordonnées approximatives */
 const LIEUX=[["Ma position (démo)","Cocody Angré",5.3920,-3.9880],["Plateau","Abidjan",5.3197,-4.0197],["Cocody Angré","Cocody",5.3920,-3.9880],["Cocody Riviera Palmeraie","Cocody",5.3780,-3.9500],["Cocody Deux-Plateaux","Cocody",5.3700,-4.0000],["Marcory Zone 4","Marcory",5.3030,-3.9800],["Treichville","Abidjan",5.2930,-4.0050],["Adjamé","Abidjan",5.3600,-4.0230],["Koumassi","Abidjan",5.2970,-3.9500],["Attécoubé","Abidjan",5.3380,-4.0480],["Abobo Gare","Abobo",5.4160,-4.0200],["Yopougon Siporex","Yopougon",5.3400,-4.0800],["Yopougon Niangon","Yopougon",5.3250,-4.1000],["Port-Bouët Aéroport","Port-Bouët",5.2610,-3.9260],["Bingerville","Bingerville",5.3550,-3.8900],["Anyama","Anyama",5.4950,-4.0520],["Songon Dagbé","Songon",5.3300,-4.2400],["Songon Kassemblé","Songon",5.3250,-4.2550],["Dabou","Dabou",5.3250,-4.3770],["Grand-Bassam","Grand-Bassam",5.2000,-3.7400]].map(a=>({n:a[0],z:a[1],la:a[2],lo:a[3]}));
+/* Livraisons créées depuis le portail fournisseur : liste partagée avec l'espace chauffeur (stockage local). */
+const LIV={lire(){return LS.get("livraisons",[])},ecrire(l){LS.set("livraisons",l)},maj(id,f){const l=LIV.lire(),o=l.find(x=>x.id===id);if(!o)return null;f(o);LIV.ecrire(l);return o}};
 const lieu=n=>LIEUX.find(l=>l.n===n);
 /* Carte schématique (aucune tuile externe : fonctionne hors ligne) */
 let W=360,H=470;

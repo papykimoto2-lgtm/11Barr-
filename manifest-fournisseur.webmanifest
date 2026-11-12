@@ -1,0 +1,18 @@
+{
+  "id": "./fournisseur.html",
+  "name": "11Barré Entreprises — Portail fournisseur",
+  "short_name": "11Barré Pro+",
+  "description": "Créez, importez et suivez vos livraisons, vos paiements à la livraison et vos factures.",
+  "lang": "fr",
+  "start_url": "./fournisseur.html",
+  "scope": "./fournisseur.html",
+  "display": "standalone",
+  "background_color": "#0d1b2a",
+  "theme_color": "#0d1b2a",
+  "categories": ["business", "logistics"],
+  "icons": [
+    { "src": "icons/fournisseur-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/fournisseur-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/fournisseur-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

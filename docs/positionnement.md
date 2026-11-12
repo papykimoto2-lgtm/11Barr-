@@ -58,11 +58,11 @@ Légende : ✅ fait (maquette locale testée) · 🟡 partiel · ❌ à construi
 
 | Axe / espace | État | Ce qui existe | Ce qui manque |
 |---|---|---|---|
-| 1. Moto + Cargo | 🟡 | Catégories Moto-taxi, Livraison à moto, Express Cargo, Camion ; profils chauffeur et livreur ; demandes filtrées par type | Capacité des véhicules (poids, volume, dimensions), documents et assurances, refus d'affectation si sous-capacité, espace transporteur Cargo (flotte, conducteurs) |
-| 2. Portail professionnel | ❌ | — | Création de commandes multiples, import CSV, destinataires, historique, factures, dépenses, utilisateurs collaborateurs |
-| 3. Paiement à la livraison | ✅ côté règles | Journal immuable ; produit dû au fournisseur, transport, part du livreur, commission, tous distincts ; fonds de tiers jamais comptés en revenu ; 7 scénarios financiers du dossier testés | Relevé par fournisseur, reversement au fournisseur (interface), preuve de collecte |
+| 1. Moto + Cargo | 🟡 | Catégories Moto-taxi, Livraison à moto, Express Cargo, Camion ; **choix automatique Moto ou Cargo selon le poids et le volume** (seuils paramétrables) ; profils chauffeur et livreur ; demandes filtrées par type | Capacité des véhicules (poids, volume, dimensions), documents et assurances, refus d'affectation si sous-capacité, espace transporteur Cargo (flotte, conducteurs) |
+| 2. Portail professionnel | 🟡 | Maquette `fournisseur.html` : inscription et validation du compte, points de collecte, création de livraisons avec devis détaillé, **import CSV** avec aperçu, rapport d'erreurs et refus des doublons, suivi en direct avec historique et preuve, factures périodiques imprimables, utilisateurs collaborateurs (administrateur, opérateur, lecture seule) | Carnet de destinataires, livraisons récurrentes, analyse des dépenses, exports XLSX/PDF, programmation à une date |
+| 3. Paiement à la livraison | ✅ maquette | Journal immuable ; produit dû au fournisseur, transport, part du livreur, commission, tous distincts ; fonds de tiers jamais comptés en revenu ; 7 scénarios financiers du dossier testés ; **relevé par fournisseur et demande de reversement** dans le portail ; reversement refusé tant que les livreurs n'ont pas remis les fonds | Preuve de collecte (photo, signature), consolidation de plusieurs fournisseurs, rapprochement bancaire |
 | 4. Gestion des transporteurs | 🟡 | Gains, solde avec 11Barré, déclaration et validation de versement | Performances, documents, règlement par la plateforme (interface), historique détaillé |
-| 5. Logistique entreprises | ❌ | Plans tarifaires datés et paramétrables (moteur) | Contrats, tarifs négociés par client, comptes clients, facturation périodique, tableaux de bord |
+| 5. Logistique entreprises | 🟡 | Plans tarifaires datés ; **remise de contrat** par client ; transport facturé au compte avec créance ; **facturation périodique** numérotée ; tableau de bord du client | Contrats (durée, conditions), tarifs négociés par zone ou catégorie, plafond de crédit, relances, TVA |
 | 6. Affectation intelligente | ❌ | Diffusion à tout chauffeur en ligne du bon profil, acceptation sous 30 s | Classement par proximité, disponibilité, capacité, temps estimé, fiabilité ; relance au suivant en cas de refus |
 
 | Espace | État |
@@ -70,8 +70,8 @@ Légende : ✅ fait (maquette locale testée) · 🟡 partiel · ❌ à construi
 | 1. Application client | 🟡 maquette complète du parcours, prix détaillé avant commande |
 | 2. Application livreur Moto | 🟡 maquette complète (demande, course, code, encaissement, gains) |
 | 3. Application transporteur Cargo | ❌ |
-| 4. Portail fournisseur et entreprise | ❌ |
-| 5. Administration centrale | ❌ (validation des versements simulée dans l'espace chauffeur) |
+| 4. Portail fournisseur et entreprise | 🟡 maquette complète du parcours principal |
+| 5. Administration centrale | ❌ (validations simulées par des boutons « démo » : compte entreprise, versement livreur, reversement fournisseur, paiement de facture) |
 | 6. Gestion financière et comptable | 🟡 moteur et tests ; aucune interface comptable |
 | 7. Flottes et partenaires | ❌ |
 
