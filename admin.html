@@ -35,7 +35,7 @@ h1{font-size:24px;margin:4px 0 12px}h2{font-size:18px;margin:18px 0 8px}h1:focus
 .btn{border:0;border-radius:12px;padding:10px 16px;min-height:44px;font-weight:800;background:var(--acc);color:var(--accink);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .btn.s{background:var(--soft);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}.btn.er{background:var(--er);color:var(--onc)}.btn.ok{background:var(--ok);color:var(--onc)}
 .btn.sm{padding:5px 11px;font-size:14px;border-radius:9px;min-height:36px}
-@media (pointer:coarse),(max-width:820px){.btn.sm{min-height:44px;padding:8px 14px}}
+@media (pointer:coarse),(max-width:820px){.btn.sm{min-height:44px;padding:8px 14px}.lk{min-height:44px;display:inline-flex;align-items:center}th .sb{min-height:44px}}
 .btn:disabled{opacity:.55;cursor:not-allowed}
 .btn[aria-busy=true]:before{content:"";width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:rot .7s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
@@ -150,7 +150,7 @@ const UX={stack:[],depth:0,mk:"",lastSel:null,want:null,conf:null,photo:null,she
  sel(el){if(!el||!el.tagName||el===document.body)return null;if(el.id)return"#"+CSS.escape(el.id);const d=el.dataset,ks=Object.keys(d);if(!ks.length)return null;return el.tagName.toLowerCase()+ks.map(k=>"[data-"+k.replace(/[A-Z]/g,c=>"-"+c.toLowerCase())+'="'+String(d[k]).replace(/["\\]/g,"\\$&")+'"]').join("")},
  focusable(r){return[...r.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(e=>e.getClientRects().length)}};
 function paint(app,html,depth,mk){const a=document.activeElement,mine=app.contains(a)&&a!==app,sel=mine?UX.sel(a):null,ss=mine?a.selectionStart:null,se=mine?a.selectionEnd:null,sy=window.scrollY,same=mk===UX.mk,st=[...app.querySelectorAll(".ov")].map(o=>o.scrollTop);
- app.innerHTML=html;const ov=[...app.querySelectorAll(".ov")],top=ov[ov.length-1];
+ app.innerHTML=html;app.querySelectorAll(".pop").forEach(p=>p.setAttribute("tabindex","-1"));const ov=[...app.querySelectorAll(".ov")],top=ov[ov.length-1];
  [...app.children].forEach(c=>{c.inert=!!top&&c!==top;if(c.inert)c.setAttribute("aria-hidden","true");else c.removeAttribute("aria-hidden")});
  document.body.style.overflow=top?"hidden":"";
  const on=app.querySelector("nav.tabs .on");if(on){const n=on.parentElement;n.scrollLeft=Math.max(0,on.offsetLeft-(n.clientWidth-on.offsetWidth)/2)}
@@ -359,12 +359,12 @@ const A=Object.assign({
  effacer(){ST.q="";setFlt(ST.tab,"");razPg();render()},
  /* entreprises */
  orgstatut(t){if(!exige("valider"))return;const v=t.dataset.v,o=ORGS.get(ST.sheet.id);if(["refuse","suspendu","complement"].includes(v)&&!motifRequis())return;let rem=0;if(v==="valide"){rem=remiseOk();if(rem===null)return}
-  const faire=()=>{const m=ST.motif.trim(),avant={statut:o.statut,remise:o.remise};ORGS.maj(o.id,x=>{x.statut=v;x.motif=m;if(v==="valide")x.remise=rem});auditer(moi(),"compte_"+v,"entreprise",o.nom,avant,{statut:v,remise:v==="valide"?rem:o.remise},m);sansPlus();toast("Compte : "+STC[v][0].toLowerCase())};
+  const faire=()=>{const m=ST.motif.trim(),avant={statut:o.statut,remise:o.remise};ORGS.maj(o.id,x=>{x.statut=v;x.motif=m;if(v==="valide")x.remise=rem});auditer(moi(),"compte_"+v,"entreprise",o.nom,avant,{statut:v,remise:v==="valide"?rem:o.remise},m);sansPlus();render();toast("Compte : "+STC[v][0].toLowerCase())};
   if(v==="suspendu")return confirmer({titre:"Suspendre « "+o.nom+" » ?",texte:"L'entreprise ne pourra plus créer de livraisons tant que le compte n'est pas réactivé. Motif : "+ST.motif.trim(),ok:"Oui, suspendre",danger:true,fn:faire});faire()},
  orgremise(){if(!exige("valider")||!motifRequis())return;const rem=remiseOk();if(rem===null)return;const o=ORGS.get(ST.sheet.id);ORGS.maj(o.id,x=>{x.remise=rem});auditer(moi(),"remise_contrat","entreprise",o.nom,{remise:o.remise||0},{remise:rem},ST.motif.trim());sansPlus();render();toast("Remise enregistrée")},
  /* livreurs */
  livstatut(t){if(!exige("valider"))return;const v=t.dataset.v,l=LIVREURS.get(ST.sheet.id);if(["refuse","suspendu","complement"].includes(v)&&!motifRequis())return;if(v==="valide"&&(!l.dossier||!M.docsValides(l)))return toast("Dossier incomplet ou assurance expirée : validation impossible");
-  const faire=()=>{const m=ST.motif.trim();LIVREURS.maj(l.id,x=>{x.statut=v;x.motif=m});auditer(moi(),"livreur_"+v,"livreur",l.nom,{statut:l.statut},{statut:v},m);sansPlus();toast("Livreur : "+STC[v][0].toLowerCase())};
+  const faire=()=>{const m=ST.motif.trim();LIVREURS.maj(l.id,x=>{x.statut=v;x.motif=m});auditer(moi(),"livreur_"+v,"livreur",l.nom,{statut:l.statut},{statut:v},m);sansPlus();render();toast("Livreur : "+STC[v][0].toLowerCase())};
   if(v==="suspendu")return confirmer({titre:"Suspendre "+l.nom+" ?",texte:"Le livreur sera mis hors ligne immédiatement et ne recevra plus de courses. Motif : "+ST.motif.trim(),ok:"Oui, suspendre",danger:true,fn:faire});faire()},
  /* commandes */
  affecter(){if(!exige("w_cmd")||!motifRequis())return;const o=LIV.lire().find(x=>x.id===ST.sheet.id),l=LIVREURS.get(ST.affecte);if(!l)return bad({"aff.1":"Choisissez un livreur éligible dans la liste"});if(!M.eligibles([l],o).length)return bad({"aff.1":"Ce livreur n'est pas éligible"});
